@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { logInsertEvidence } from '@/utils/petInsertEvidence';
 import { LitterFormData, BabyData, Pet } from '@/types/pet';
 import { SPECIES_CONFIG, SpeciesType } from '@/types/species';
 import { format } from 'date-fns';
@@ -54,6 +55,7 @@ export default function BirthPage() {
         return;
       }
       setUserId(user.id);
+      logInsertEvidence('SESSION', { authUid: user.id });
 
       const { data: homes } = await supabase
         .from('homes')
@@ -62,10 +64,22 @@ export default function BirthPage() {
         .limit(1);
 
       if (!homes || homes.length === 0) {
+        logInsertEvidence('HOME_LOOKUP', { authUid: user.id, homeId: null });
         setError('กรุณาสร้างบ้านก่อน');
         return;
       }
       setHomeId(homes[0].id);
+
+      // 📷 Evidence: is this uid a home_members row? (RLS discriminator — read-only)
+      const { data: membership } = await supabase
+        .from('home_members')
+        .select('home_id, role')
+        .eq('user_id', user.id);
+      logInsertEvidence('HOME_MEMBERSHIP', {
+        authUid: user.id,
+        homeId: homes[0].id,
+        membership,
+      });
 
       // Fetch existing pets for parent selection
       const { data: pets } = await supabase
@@ -146,22 +160,30 @@ export default function BirthPage() {
       const father = resolveParent(sharedData.father_id, sharedData.father_name);
 
       // 1. Create litter
+      const litterPayload = {
+        home_id: homeId,
+        name: sharedData.name,
+        birth_date: sharedData.birth_date || null,
+        location: sharedData.location,
+        notes: sharedData.notes || null,
+        mother_id: mother.id,
+        father_id: father.id,
+        mother_name: mother.name || null,
+        father_name: father.name || null,
+        created_by: userId,
+      };
       const { data: litter, error: litterError } = await supabase
         .from('litters')
-        .insert({
-          home_id: homeId,
-          name: sharedData.name,
-          birth_date: sharedData.birth_date || null,
-          location: sharedData.location,
-          notes: sharedData.notes || null,
-          mother_id: mother.id,
-          father_id: father.id,
-          mother_name: mother.name || null,
-          father_name: father.name || null,
-          created_by: userId,
-        })
+        .insert(litterPayload)
         .select()
         .single();
+
+      logInsertEvidence('LITTER_INSERT', {
+        authUid: userId,
+        homeId,
+        payload: litterPayload,
+        error: litterError,
+      });
 
       if (litterError) throw litterError;
 
@@ -169,25 +191,33 @@ export default function BirthPage() {
       const createdPets: { id: string; name: string }[] = [];
 
       for (const baby of babies) {
+        const petPayload = {
+          home_id: homeId,
+          name: baby.name || `Baby #${createdPets.length + 1}`,
+          nickname: baby.nickname || null,
+          species: sharedData.location === 'Farm' ? 'Cat' : 'Cat', // default, user picks
+          breed: baby.breed || null,
+          gender: baby.gender || null,
+          birth_date: baby.birth_date_override || sharedData.birth_date || null,
+          color: baby.color || null,
+          litter_id: litter.id,
+          mother_id: mother.id,
+          father_id: father.id,
+          birth_weight: baby.birth_weight || null,
+          special_traits: baby.special_traits?.length ? baby.special_traits : null,
+        };
         const { data: pet, error: petError } = await supabase
           .from('pets')
-          .insert({
-            home_id: homeId,
-            name: baby.name || `Baby #${createdPets.length + 1}`,
-            nickname: baby.nickname || null,
-            species: sharedData.location === 'Farm' ? 'Cat' : 'Cat', // default, user picks
-            breed: baby.breed || null,
-            gender: baby.gender || null,
-            birth_date: baby.birth_date_override || sharedData.birth_date || null,
-            color: baby.color || null,
-            litter_id: litter.id,
-            mother_id: mother.id,
-            father_id: father.id,
-            birth_weight: baby.birth_weight || null,
-            special_traits: baby.special_traits?.length ? baby.special_traits : null,
-          })
+          .insert(petPayload)
           .select('id, name')
           .single();
+
+        logInsertEvidence('PET_INSERT', {
+          authUid: userId,
+          homeId,
+          payload: petPayload,
+          error: petError,
+        });
 
         if (petError) throw petError;
         createdPets.push(pet);
@@ -207,18 +237,37 @@ export default function BirthPage() {
           .filter(Boolean)
           .join('\n');
 
-        await supabase.from('life_journey_events').insert({
+        const journeyPayload = {
           home_id: homeId,
           pet_id: pet.id,
           author_id: userId,
           event_type: 'milestone',
           content: journeyContent,
+        };
+        const { error: journeyError } = await supabase
+          .from('life_journey_events')
+          .insert(journeyPayload);
+
+        logInsertEvidence('JOURNEY_INSERT', {
+          authUid: userId,
+          homeId,
+          payload: journeyPayload,
+          error: journeyError,
         });
       }
 
       setStep('done');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด';
+      const message = err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null && 'message' in err
+          ? String(err.message)
+          : 'เกิดข้อผิดพลาด';
+      logInsertEvidence('CREATE_ABORT', {
+        authUid: userId,
+        homeId,
+        error: { message },
+      });
       setError(message);
       setStep('review');
     }

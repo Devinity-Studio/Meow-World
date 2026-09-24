@@ -6,6 +6,7 @@ import { Pet, PetFormData } from '@/types/pet';
 import { PetCard } from '@/components/pets/PetCard';
 import { PetForm } from '@/components/pets/PetForm';
 import { createClient } from '@/utils/supabase/client';
+import { logInsertEvidence } from '@/utils/petInsertEvidence';
 
 export default function PetsPage() {
   const router = useRouter();
@@ -87,12 +88,23 @@ export default function PetsPage() {
         home_id: homes[0].id,
       });
 
+      logInsertEvidence('PET_INSERT_DIRECT', {
+        authUid: user.id,
+        homeId: homes[0].id,
+        payload: { ...data, home_id: homes[0].id },
+        error,
+      });
+
       if (error) throw error;
 
       setShowForm(false);
       fetchPets();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเพิ่มสัตว์เลี้ยง';
+      const message = error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String(error.message)
+          : 'เกิดข้อผิดพลาดในการเพิ่มสัตว์เลี้ยง';
       alert(`เกิดข้อผิดพลาด: ${message}`);
     } finally {
       setSubmitting(false);
