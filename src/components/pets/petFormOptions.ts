@@ -16,8 +16,11 @@ import { SPECIES_CONFIG, SpeciesType } from '@/types/species';
 
 export interface SpeciesOption {
   id: SpeciesType;
-  icon: string;
+  /** Stored value — English name, the existing DB convention ('Cat' in Birth Wizard & mockData). */
+  value: string;
+  /** Display label — Thai, from the same config. */
   label: string;
+  icon: string;
   enabled: boolean;
 }
 
@@ -25,6 +28,7 @@ const SPECIES_ORDER: SpeciesType[] = ['cat', 'dog', 'rabbit', 'other'];
 
 export const SPECIES_OPTIONS: SpeciesOption[] = SPECIES_ORDER.map((id) => ({
   id,
+  value: SPECIES_CONFIG[id].name,
   icon: SPECIES_CONFIG[id].icon,
   label: SPECIES_CONFIG[id].nameThai,
   // Business rule: only Cat is supported today (SPECIES_CONFIG already contains

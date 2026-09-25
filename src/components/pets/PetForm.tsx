@@ -92,11 +92,11 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
               key={s.id}
               type="button"
               disabled={!s.enabled}
-              aria-pressed={formData.species.toLowerCase() === s.id}
-              onClick={() => setFormData({ ...formData, species: s.label })}
+              aria-pressed={formData.species === s.value}
+              onClick={() => setFormData({ ...formData, species: s.value })}
               className={`
                 flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors
-                ${formData.species.toLowerCase() === s.id
+                ${formData.species === s.value
                   ? 'border-orange-500 bg-orange-50 text-orange-700'
                   : 'border-gray-300 bg-white text-gray-700'}
                 ${!s.enabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}
