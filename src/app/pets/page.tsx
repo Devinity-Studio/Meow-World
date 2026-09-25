@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pet, PetFormData } from '@/types/pet';
+import { Pet, PetInsertPayload } from '@/types/pet';
 import { PetCard } from '@/components/pets/PetCard';
 import { PetForm } from '@/components/pets/PetForm';
 import { createClient } from '@/utils/supabase/client';
@@ -16,6 +16,7 @@ export default function PetsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchPets = useCallback(async () => {
     const supabase = createClient();
@@ -64,10 +65,11 @@ export default function PetsPage() {
     void fetchPets();
   }, [fetchPets]);
 
-  async function handleCreate(data: PetFormData) {
+  async function handleCreate(data: PetInsertPayload) {
     const supabase = createClient();
     try {
       setSubmitting(true);
+      setFormError(null);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้');
@@ -105,13 +107,14 @@ export default function PetsPage() {
         : typeof error === 'object' && error !== null && 'message' in error
           ? String(error.message)
           : 'เกิดข้อผิดพลาดในการเพิ่มสัตว์เลี้ยง';
-      alert(`เกิดข้อผิดพลาด: ${message}`);
+      setFormError(message);
     } finally {
+
       setSubmitting(false);
     }
   }
 
-  async function handleUpdate(data: PetFormData) {
+  async function handleUpdate(data: PetInsertPayload) {
     if (!editingPet) return;
     const supabase = createClient();
     try {
@@ -208,12 +211,18 @@ export default function PetsPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 {editingPet ? 'แก้ไขข้อมูลสัตว์เลี้ยง' : 'เพิ่มสัตว์เลี้ยงใหม่'}
               </h2>
+              {formError && !editingPet && (
+                <div role="alert" className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  <p className="font-medium">⚠️ {formError}</p>
+                </div>
+              )}
               <PetForm
                 pet={editingPet}
                 onSubmit={editingPet ? handleUpdate : handleCreate}
                 onCancel={() => {
                   setShowForm(false);
                   setEditingPet(undefined);
+                  setFormError(null);
                 }}
                 isLoading={submitting}
               />

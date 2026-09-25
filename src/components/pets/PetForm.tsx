@@ -1,13 +1,35 @@
 'use client';
 
 import { useState } from 'react';
-import { Pet, PetFormData } from '@/types/pet';
+import { Pet, PetFormData, PetInsertPayload } from '@/types/pet';
 
 interface PetFormProps {
   pet?: Pet;
-  onSubmit: (data: PetFormData) => void;
+  onSubmit: (data: PetInsertPayload) => void;
   onCancel: () => void;
   isLoading?: boolean;
+}
+
+/**
+ * Input boundary: Postgres rejects '' for date columns (22007) and we do not
+ * want stray empty strings stored as data in optional text fields either.
+ * Semantics per field — not a blind replace:
+ *   - birth_date: '' is "no date" → null (date column cannot hold empty string)
+ *   - nickname/breed/gender/color: '' is "not provided" → null (keep DB clean)
+ *   - name/species: required by the form, never normalized
+ * Matches Birth Wizard behavior (birth/page.tsx maps '' → null before insert),
+ * which is our reference behavior for pet creation.
+ */
+export function toPetInsertPayload(form: PetFormData): PetInsertPayload {
+  return {
+    name: form.name,
+    species: form.species,
+    nickname: form.nickname?.trim() || null,
+    breed: form.breed?.trim() || null,
+    gender: form.gender || null,
+    birth_date: form.birth_date || null,
+    color: form.color?.trim() || null,
+  };
 }
 
 export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormProps) {
@@ -23,7 +45,7 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(toPetInsertPayload(formData));
   };
 
   return (

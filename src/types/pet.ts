@@ -25,6 +25,21 @@ export interface Pet {
   pet_code?: string | null;
 }
 
+/**
+ * Payload shape sent to the `pets` table after form normalization.
+ * Optional fields are null (not '') when not provided — Postgres date columns
+ * reject empty strings (22007) and empty strings in text fields become junk data.
+ */
+export interface PetInsertPayload {
+  name: string;
+  species: string;
+  nickname?: string | null;
+  breed?: string | null;
+  gender?: string | null;
+  birth_date?: string | null;
+  color?: string | null;
+}
+
 export interface PetFormData {
   name: string;
   species: string;
