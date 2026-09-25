@@ -129,11 +129,12 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">-- ไม่ระบุ --</option>
-          {BREED_OPTIONS.map((b) => (
+          {BREED_OPTIONS.filter((b) => b.note !== 'TEXT_INPUT').map((b) => (
             <option key={b.value} value={b.value}>
-              {b.note === 'TEXT_INPUT' ? 'อื่น ๆ (พิมพ์เอง)' : b.value}
+              {b.value}
             </option>
           ))}
+          <option value="__custom__">อื่น ๆ (พิมพ์เอง)</option>
         </select>
         {customBreed && (
           <input
