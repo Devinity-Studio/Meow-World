@@ -56,6 +56,14 @@ export interface ColorOption {
   value: string;
 }
 
+/**
+ * Data semantics: only TRUE colors live here. Pattern words (สามสี, สองสี,
+ * ลายเสือ/tabby, ลายสลิด) are Color *Patterns* — a different attribute level —
+ * and must not be selectable as colors, otherwise "ส้ม + ขาว + สามสี"
+ * contradicts itself. The color COUNT is derived data (see colorCountLabel),
+ * never a user choice. A pattern input waits for its own storage (e.g. a
+ * color_pattern column) — we never ship an input the system cannot persist.
+ */
 export const COLOR_OPTIONS: ColorOption[] = [
   { value: 'ส้ม' },
   { value: 'ขาว' },
@@ -63,9 +71,6 @@ export const COLOR_OPTIONS: ColorOption[] = [
   { value: 'เทา' },
   { value: 'น้ำตาล' },
   { value: 'ครีม' },
-  { value: 'สามสี' },
-  { value: 'สองสี' },
-  { value: 'ลายเสือ' },
   { value: 'ฟ้า' },
 ];
 
@@ -78,4 +83,15 @@ export function joinColors(selected: string[]): string {
 export function splitColors(stored: string | null | undefined): string[] {
   if (!stored) return [];
   return stored.split(/\s+/).filter(Boolean);
+}
+
+/**
+ * Derived display label from the selected colors — NOT a stored field and NOT
+ * a user choice: 0 → '' · 1 → 'สีเดียว' · N → 'N สี'. Two-color/three-color
+ * facts belong to the system, not the form.
+ */
+export function colorCountLabel(colors: string[]): string {
+  if (colors.length === 0) return '';
+  if (colors.length === 1) return 'สีเดียว';
+  return `${colors.length} สี`;
 }

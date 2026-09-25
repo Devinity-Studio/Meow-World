@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toPetInsertPayload } from '@/components/pets/PetForm';
-import { joinColors, splitColors } from '@/components/pets/petFormOptions';
+import { joinColors, splitColors, colorCountLabel, COLOR_OPTIONS } from '@/components/pets/petFormOptions';
 import { PetFormData } from '@/types/pet';
 
 /**
@@ -97,5 +97,22 @@ describe('color checklist ↔ storage convention', () => {
     const current = splitColors('ส้ม ขาว');
     const next = current.filter((x) => x !== 'ขาว');
     expect(joinColors(next)).toBe('ส้ม');
+  });
+});
+
+describe('color semantics — pattern words are not colors', () => {
+  it('never offers pattern words as color choices', () => {
+    const values = COLOR_OPTIONS.map((c) => c.value);
+    // สามสี/สองสี are derived facts; ลาย* are patterns — none may be a color option
+    expect(values).not.toContain('สามสี');
+    expect(values).not.toContain('สองสี');
+    expect(values.every((v) => !v.startsWith('ลาย'))).toBe(true);
+  });
+
+  it('derives the count label from the selection, never stores it as a color', () => {
+    expect(colorCountLabel([])).toBe('');
+    expect(colorCountLabel(['ส้ม'])).toBe('สีเดียว');
+    expect(colorCountLabel(['ส้ม', 'ขาว'])).toBe('2 สี');
+    expect(colorCountLabel(['ส้ม', 'ขาว', 'ดำ'])).toBe('3 สี');
   });
 });

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Pet, PetFormData, PetInsertPayload } from '@/types/pet';
-import { SPECIES_OPTIONS, BREED_OPTIONS, COLOR_OPTIONS, joinColors, splitColors } from './petFormOptions';
+import { SPECIES_OPTIONS, BREED_OPTIONS, COLOR_OPTIONS, joinColors, splitColors, colorCountLabel } from './petFormOptions';
 
 interface PetFormProps {
   pet?: Pet;
@@ -195,7 +195,12 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
               );
             })}
           </div>
-          <p className="text-xs text-gray-400 mt-1">เลือกได้หลายสี — เช่น มู่ทู่ คือ ส้ม ขาว</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {colorCountLabel(splitColors(formData.color))
+              ? `🎨 ${colorCountLabel(splitColors(formData.color))} — เลือกได้หลายสี เช่น มู่ทู่ คือ ส้ม ขาว`
+              : 'เลือกได้หลายสี — เช่น มู่ทู่ คือ ส้ม ขาว'}
+            {'' }
+          </p>
         </div>
       </div>
 
