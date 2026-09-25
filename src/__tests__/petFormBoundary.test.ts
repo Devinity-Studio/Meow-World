@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toPetInsertPayload } from '@/components/pets/PetForm';
+import { joinColors, splitColors } from '@/components/pets/petFormOptions';
 import { PetFormData } from '@/types/pet';
 
 /**
@@ -73,5 +74,28 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
     const payload = toPetInsertPayload(baseForm({ name: 'หมูหยอง', species: 'Cat' }));
     expect(payload.name).toBe('หมูหยอง');
     expect(payload.species).toBe('Cat');
+  });
+});
+
+describe('color checklist ↔ storage convention', () => {
+  it('joins multiple colors with spaces, matching real data (ส้ม ขาว)', () => {
+    expect(joinColors(['ส้ม', 'ขาว'])).toBe('ส้ม ขาว');
+  });
+
+  it('round-trips stored color back to checklist selections', () => {
+    expect(splitColors('ส้ม ขาว')).toEqual(['ส้ม', 'ขาว']);
+    expect(splitColors('เทา')).toEqual(['เทา']);
+  });
+
+  it('handles empty/null stored colors', () => {
+    expect(splitColors(null)).toEqual([]);
+    expect(splitColors('')).toEqual([]);
+    expect(joinColors([])).toBe('');
+  });
+
+  it('toggle-off removes only the deselected color', () => {
+    const current = splitColors('ส้ม ขาว');
+    const next = current.filter((x) => x !== 'ขาว');
+    expect(joinColors(next)).toBe('ส้ม');
   });
 });
