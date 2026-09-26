@@ -41,10 +41,10 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
   isOpenModal = false,
   onCloseModal,
 }) => {
-  // Tagged Pets state (can tag multiple pets or all)
-  const [selectedPetIds, setSelectedPetIds] = useState<string[]>(() =>
-    pets.length > 0 ? [pets[0].id] : []
-  );
+  // Tagged Pets state — เริ่มว่างเสมอ: pets มาถึงแบบ async (mount ก่อน fetch เสร็จ)
+  // การ init จาก prop snapshot คือ stale-empty บั๊กที่ runtime จับได้ (2026-09-26)
+  // และการ preselect แทนผู้ใช้ขัดหลัก "UI ไม่เดาแทน" — ผู้ใช้แท็กเอง, Q4 ว่างได้
+  const [selectedPetIds, setSelectedPetIds] = useState<string[]>([]);
   // Tagged Members state
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([user.id]);
 
@@ -126,7 +126,8 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
       // location: ไม่ส่งเข้า DB — ยังไม่มีที่เก็บ (กฎ: ไม่สร้าง input ที่ระบบเก็บไม่ได้)
     });
 
-    // Reset Form
+    // Reset Form — รวม selection เพื่อไม่ให้แท็กค้างจากเรื่องก่อนหน้า
+    setSelectedPetIds([]);
     setTitle('');
     setDescription('');
     setImageUrl('');
