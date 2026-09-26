@@ -51,6 +51,16 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
           <span className="font-medium">สายพันธุ์:</span> {pet.species}
           {pet.breed && ` - ${pet.breed}`}
         </p>
+        {pet.nickname && (
+          <p>
+            <span className="font-medium">ชื่อเล่น:</span> {pet.nickname}
+          </p>
+        )}
+        {pet.gender && (
+          <p>
+            <span className="font-medium">เพศ:</span> {pet.gender}
+          </p>
+        )}
         {pet.birth_date && (
           <p>
             <span className="font-medium">วันเกิด:</span>{' '}
@@ -58,14 +68,14 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
             {age && ` (${age})`}
           </p>
         )}
-        {pet.weight && (
+        {pet.color && (
           <p>
-            <span className="font-medium">น้ำหนัก:</span> {pet.weight} กก.
+            <span className="font-medium">สี:</span> {pet.color}
           </p>
         )}
         <p className="text-sm text-gray-400">
-          อัปเดตล่าสุด:{' '}
-          {format(new Date(pet.updated_at), 'd MMM yyyy HH:mm', { locale: th })}
+          สร้างเมื่อ:{' '}
+          {format(new Date(pet.created_at), 'd MMM yyyy', { locale: th })}
         </p>
       </div>
     </div>
@@ -77,7 +87,7 @@ function calculateAge(birthDate: string): string {
   const now = new Date();
   const years = now.getFullYear() - birth.getFullYear();
   const months = now.getMonth() - birth.getMonth();
-  
+
   if (years > 0) {
     return `${years} ปี`;
   } else if (months > 0) {

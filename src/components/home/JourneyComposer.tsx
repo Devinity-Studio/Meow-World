@@ -8,7 +8,6 @@ import {
   Calendar,
   Send,
   Users,
-  MapPin,
   Sparkles,
   Tag,
 } from 'lucide-react';
@@ -42,18 +41,19 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
   isOpenModal = false,
   onCloseModal,
 }) => {
-  // Tagged Pets state (can tag multiple pets or all)
-  const [selectedPetIds, setSelectedPetIds] = useState<string[]>(() =>
-    pets.length > 0 ? [pets[0].id] : []
-  );
+  // Tagged Pets state — เริ่มว่างเสมอ: pets มาถึงแบบ async (mount ก่อน fetch เสร็จ)
+  // การ init จาก prop snapshot คือ stale-empty บั๊กที่ runtime จับได้ (2026-09-26)
+  // และการ preselect แทนผู้ใช้ขัดหลัก "UI ไม่เดาแทน" — ผู้ใช้แท็กเอง, Q4 ว่างได้
+  const [selectedPetIds, setSelectedPetIds] = useState<string[]>([]);
   // Tagged Members state
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([user.id]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState<EventCategory>('memory');
+  // event_date: คงอยู่ใน UI/flow ตาม Design Lock — แต่ยังไม่ถูก persist (TIME_MODEL ยังไม่ตัดสิน
+  // occurred-date semantic; created_at เป็นค่าตั้งต้นชั่วคราวใน adapter)
   const [eventDate, setEventDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [location, setLocation] = useState('');
   const [imageUrl, setImageUrl] = useState<string>('');
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [showVideoInput, setShowVideoInput] = useState(false);
@@ -112,8 +112,10 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
     if (!title.trim()) return;
 
     onAddEvent({
-      pet_id: selectedPetIds[0] || (pets[0]?.id ?? undefined),
-      tagged_pet_ids: selectedPetIds.length > 0 ? selectedPetIds : pets.map((p) => p.id),
+      // ส่งตามที่ผู้ใช้เลือกจริง (รวม empty) — ไม่เดาแทน: Q4 "ไม่มี Pet ก็สร้างได้"
+      // ต้องผ่าน UI ได้ — integrity เป็นหน้าที่ของ payload layer ไม่ใช่ fallback ของ composer
+      pet_id: selectedPetIds[0] || undefined,
+      tagged_pet_ids: selectedPetIds,
       tagged_user_ids: selectedMemberIds,
       event_date: eventDate,
       event_type: eventType,
@@ -121,15 +123,15 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
       description: description.trim(),
       image_url: imageUrl || undefined,
       video_url: videoUrl.trim() || undefined,
-      location: location.trim() || undefined,
+      // location: ไม่ส่งเข้า DB — ยังไม่มีที่เก็บ (กฎ: ไม่สร้าง input ที่ระบบเก็บไม่ได้)
     });
 
-    // Reset Form
+    // Reset Form — รวม selection เพื่อไม่ให้แท็กค้างจากเรื่องก่อนหน้า
+    setSelectedPetIds([]);
     setTitle('');
     setDescription('');
     setImageUrl('');
     setVideoUrl('');
-    setLocation('');
     if (onCloseModal) onCloseModal();
   };
 
@@ -352,7 +354,7 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
             <span>{videoUrl ? 'มีวิดีโอแนบ' : 'เพิ่มวิดีโอ'}</span>
           </button>
 
-          {/* Event Date Picker (สามารถเลือกย้อนหลังตั้งแต่วันแรกเกิดได้) */}
+          {/* Event Date Picker — คงไว้ใน flow ตาม Design Lock (ยังไม่ persist รอ TIME_MODEL) */}
           <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] text-xs text-[#59554F]">
             <Calendar className="w-3.5 h-3.5 text-[#6B8E68]" />
             <input
@@ -362,18 +364,7 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
               className="bg-transparent border-0 outline-none text-xs text-[#1F1E1D] font-mono cursor-pointer"
             />
           </div>
-
-          {/* Location tag */}
-          <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9]">
-            <MapPin className="w-3 h-3 text-[#E06D53]" />
-            <input
-              type="text"
-              placeholder="สถานที่ (ถ้ามี)"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="bg-transparent border-0 outline-none text-xs text-[#1F1E1D] max-w-[100px]"
-            />
-          </div>
+          {/* หมายเหตุ: ช่องสถานที่ถูกพักไว้ — ระบบยังไม่มีที่เก็บ (โรคเดียวกับ event_date ใน audit แรก) */}
         </div>
 
         {/* Submit Post Button */}

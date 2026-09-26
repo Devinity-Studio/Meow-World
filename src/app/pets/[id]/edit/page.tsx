@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Pet, PetFormData } from '@/types/pet';
+import { Pet, PetInsertPayload } from '@/types/pet';
 import { PetForm } from '@/components/pets/PetForm';
 import { createClient } from '@/utils/supabase/client';
 
@@ -40,7 +40,7 @@ export default function EditPetPage() {
     }
   }
 
-  async function handleSubmit(data: PetFormData) {
+  async function handleSubmit(data: PetInsertPayload) {
     try {
       setSubmitting(true);
 

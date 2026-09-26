@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEOW WORLD — Video + Text Overlay</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{ --stroke:#241a15; --ink:#3F322C; }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#12100f;overflow:hidden;font-family:'Mitr',sans-serif}
+
+.frame{position:absolute;inset:0;margin:auto;
+  width:min(100vw,56.25vh);height:min(100vh,177.78vw);
+  overflow:hidden;background:#E7F0DC;box-shadow:0 30px 90px rgba(0,0,0,.6)}
+
+/* ── วิดีโอพื้นหลัง ── */
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+
+/* ── ใบไม้ปลิวทับ ── */
+.petals{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+.p{position:absolute;top:-8%;font-size:18px;opacity:0;animation:fall linear infinite;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.12))}
+@keyframes fall{
+  0%{transform:translate3d(0,-10vh,0) rotate(0);opacity:0}
+  8%{opacity:.9} 50%{transform:translate3d(6vw,50vh,0) rotate(220deg)}
+  100%{transform:translate3d(-4vw,112vh,0) rotate(520deg);opacity:0}}
+.p:nth-child(1){left:9%;animation-duration:9s;animation-delay:-1s}
+.p:nth-child(2){left:26%;animation-duration:11s;animation-delay:-4s;font-size:14px}
+.p:nth-child(3){left:44%;animation-duration:8s;animation-delay:-2.5s;font-size:20px}
+.p:nth-child(4){left:62%;animation-duration:12s;animation-delay:-6s;font-size:13px}
+.p:nth-child(5){left:80%;animation-duration:10s;animation-delay:-3s}
+.p:nth-child(6){left:35%;animation-duration:13s;animation-delay:-8s;font-size:16px}
+
+/* ══════ TEXT LAYER ══════ */
+.copy{position:absolute;top:6%;left:7%;z-index:14;max-width:80%}
+
+/* โลโก้: โปร่งใส ขอบดำ 2 บรรทัด */
+.logo{font-family:'Fredoka',sans-serif;font-weight:700;line-height:.94;
+  font-size:clamp(34px,10.5vw,74px);letter-spacing:.03em;user-select:none}
+.logo .row{display:flex;align-items:center}
+.logo .t{color:transparent;-webkit-text-stroke:2.4px var(--stroke);paint-order:stroke fill;
+  filter:drop-shadow(0 2px 6px rgba(255,255,255,.6))}
+.logo .paw{width:.86em;height:.86em;margin:0 .05em;transform:translateY(-.05em);
+  filter:drop-shadow(0 2px 6px rgba(255,255,255,.6))}
+.logo .paw path,.logo .paw ellipse{fill:none;stroke:var(--stroke);stroke-width:7;
+  stroke-linejoin:round;vector-effect:non-scaling-stroke;
+  stroke-dasharray:400;stroke-dashoffset:400;animation:draw 1.3s ease-out 1.6s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.r1{animation:up .9s cubic-bezier(.22,1,.36,1) .9s both}
+.r2{animation:up .9s cubic-bezier(.22,1,.36,1) 1.2s both}
+
+h1{margin-top:24px;font-weight:600;color:var(--ink);
+  font-size:clamp(26px,7.6vw,52px);line-height:1.26;
+  text-shadow:0 2px 12px rgba(255,255,255,.7);
+  animation:up .9s cubic-bezier(.22,1,.36,1) 2.4s both}
+h2{font-weight:400;color:#6B574C;font-size:clamp(16px,4.4vw,30px);line-height:1.5;margin-top:4px;
+  text-shadow:0 2px 10px rgba(255,255,255,.65);
+  animation:up .9s cubic-bezier(.22,1,.36,1) 2.8s both}
+@keyframes up{from{opacity:0;transform:translateY(30px);filter:blur(6px)}
+  to{opacity:1;transform:none;filter:none}}
+
+/* ปุ่ม glass */
+.nav{position:absolute;bottom:9%;left:50%;z-index:20;display:flex;gap:12px;padding:12px;
+  border-radius:26px;background:rgba(255,255,255,.34);
+  backdrop-filter:blur(20px) saturate(165%);border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 16px 44px rgba(74,59,52,.22);
+  animation:navUp .9s cubic-bezier(.22,1,.36,1) 4s both}
+@keyframes navUp{from{opacity:0;transform:translate(-50%,70px)}to{opacity:1;transform:translate(-50%,0)}}
+.btn{display:flex;align-items:center;gap:8px;padding:13px 22px;border:none;border-radius:19px;
+  font-family:'Mitr',sans-serif;font-size:clamp(12px,3.4vw,16px);cursor:pointer;
+  transition:transform .25s;white-space:nowrap;color:#4A3B34;
+  background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7)}
+.btn:hover{transform:translateY(-4px)}
+
+.vignette{position:absolute;inset:0;z-index:30;pointer-events:none;
+  background:radial-gradient(120% 85% at 50% 42%,transparent 52%,rgba(92,62,46,.24) 100%)}
+
+.ui{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:9px}
+.ui button{padding:9px 18px;border:1px solid #4A423D;border-radius:999px;background:#1C1917;
+  color:#F5EFE8;font-family:'Mitr',sans-serif;font-size:12px;cursor:pointer}
+.ui button:hover{background:#2D2825}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="pawIcon" viewBox="0 0 100 100">
+    <ellipse cx="21" cy="43" rx="11"   ry="14.5" transform="rotate(-20 21 43)"/>
+    <ellipse cx="41" cy="27" rx="11.8" ry="15.5" transform="rotate(-8 41 27)"/>
+    <ellipse cx="64" cy="27" rx="11.8" ry="15.5" transform="rotate(8 64 27)"/>
+    <ellipse cx="84" cy="43" rx="11"   ry="14.5" transform="rotate(20 84 43)"/>
+    <path d="M52 54c19 0 34 11.5 34 25.5C86 92 71.5 97.5 52 97.5S18 92 18 79.5C18 65.5 33 54 52 54Z"/>
+  </symbol>
+</svg>
+
+<div class="frame" id="frame">
+  <video id="vid" src="scene.mp4" autoplay muted playsinline></video>
+
+  <div class="petals">
+    <div class="p">🌸</div><div class="p">🍃</div><div class="p">🌸</div>
+    <div class="p">🍂</div><div class="p">🍃</div><div class="p">🌼</div>
+  </div>
+
+  <div class="copy">
+    <div class="logo">
+      <div class="row r1">
+        <span class="t">ME</span>
+        <svg class="paw"><use href="#pawIcon"/></svg>
+        <span class="t">W</span>
+      </div>
+      <div class="row r2"><span class="t">WORLD</span></div>
+    </div>
+    <h1>ยินดีต้อนรับ</h1>
+    <h2>สู่โลกของเจ้าเหมียว</h2>
+  </div>
+
+  <div class="nav">
+    <button class="btn">＋ เพิ่มสมาชิก</button>
+    <button class="btn">⌗ สแกน QR</button>
+  </div>
+
+  <div class="vignette"></div>
+</div>
+
+<div class="ui">
+  <button onclick="replay()">▶ เล่นซ้ำ</button>
+  <button id="recBtn" onclick="record()">⏺ อัดวิดีโอ</button>
+</div>
+
+<script>
+function replay(){
+  const old=document.getElementById('frame'), clone=old.cloneNode(true);
+  old.replaceWith(clone); clone.querySelector('video').play();
+}
+async function record(){
+  const btn=document.getElementById('recBtn'), ui=document.querySelector('.ui');
+  try{
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60}});
+    const rec=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp9',videoBitsPerSecond:12e6});
+    const chunks=[]; rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));
+      a.download='meow-world-final.webm'; a.click();
+      btn.textContent='⏺ อัดวิดีโอ'; ui.style.opacity='1';
+    };
+    ui.style.opacity='0'; btn.textContent='● กำลังอัด...';
+    replay(); rec.start(); setTimeout(()=>rec.stop(),6500);
+  }catch(e){ alert('เบราว์เซอร์ไม่รองรับ หรือคุณยกเลิกการแชร์หน้าจอครับ'); }
+}
+</script>
+</body>
+</html>

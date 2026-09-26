@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEOW WORLD — Opening (9:16)</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --T:8s;                 /* ความยาวคลิป */
+  --stroke:#241a15;       /* สีขอบโลโก้ */
+  --ink:#3F322C;
+  --img:url('meow-world.png');
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#12100f;overflow:hidden;font-family:'Mitr',sans-serif}
+
+/* ── กรอบ 9:16 ── */
+.frame{position:absolute;inset:0;margin:auto;
+  width:min(100vw,56.25vh);height:min(100vh,177.78vw);
+  overflow:hidden;background:linear-gradient(180deg,#FDEBD6,#E7F0DC);
+  box-shadow:0 30px 90px rgba(0,0,0,.6)}
+
+/* ── CAMERA: Ken Burns push-in ── */
+.camera{position:absolute;inset:0;transform-origin:68% 55%;
+  animation:push var(--T) cubic-bezier(.33,0,.25,1) both}
+@keyframes push{from{transform:scale(1.16) translateY(1.5%)}to{transform:scale(1) translateY(0)}}
+
+.plate{position:absolute;inset:-2px;background:var(--img) center/cover no-repeat,
+  linear-gradient(180deg,#FDEBD6,#E7F0DC);
+  animation:openFade 1.7s ease-out both}
+@keyframes openFade{from{opacity:0;filter:blur(18px) brightness(1.35) saturate(.7)}
+  to{opacity:1;filter:none}}
+
+/* แสงอุ่นวิ่งผ่านฉาก */
+.sunwash{position:absolute;inset:0;z-index:3;pointer-events:none;mix-blend-mode:soft-light;
+  background:radial-gradient(60% 40% at 80% 12%,rgba(255,236,180,.9),transparent 65%);
+  animation:wash 7s ease-in-out infinite}
+@keyframes wash{0%,100%{opacity:.45}50%{opacity:.95}}
+
+/* ── ใบไม้ / กลีบดอกปลิว ── */
+.petals{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:hidden}
+.p{position:absolute;top:-8%;font-size:18px;opacity:0;
+  animation:fall linear infinite;filter:drop-shadow(0 2px 3px rgba(0,0,0,.12))}
+@keyframes fall{
+  0%{transform:translate3d(0,-10vh,0) rotate(0deg);opacity:0}
+  8%{opacity:.95}
+  50%{transform:translate3d(6vw,50vh,0) rotate(220deg)}
+  85%{opacity:.8}
+  100%{transform:translate3d(-4vw,112vh,0) rotate(520deg);opacity:0}}
+.p:nth-child(1){left:8%;animation-duration:9s;animation-delay:-1s}
+.p:nth-child(2){left:24%;animation-duration:11s;animation-delay:-4s;font-size:14px}
+.p:nth-child(3){left:41%;animation-duration:8s;animation-delay:-2.5s;font-size:20px}
+.p:nth-child(4){left:58%;animation-duration:12s;animation-delay:-6s;font-size:13px}
+.p:nth-child(5){left:73%;animation-duration:10s;animation-delay:-3s}
+.p:nth-child(6){left:88%;animation-duration:13s;animation-delay:-7.5s;font-size:16px}
+.p:nth-child(7){left:33%;animation-duration:14s;animation-delay:-9s;font-size:12px}
+.p:nth-child(8){left:65%;animation-duration:9.5s;animation-delay:-5s;font-size:17px}
+
+/* ══════════ COPY BLOCK ══════════ */
+.copy{position:absolute;top:6.5%;left:7%;z-index:14;max-width:78%}
+
+/* ── LOGO: ตัวอักษรโปร่งใส ขอบดำ 2 บรรทัด ── */
+.logo{font-family:'Fredoka',sans-serif;font-weight:700;line-height:.94;
+  font-size:clamp(34px,10.5vw,74px);letter-spacing:.03em;user-select:none}
+.logo .row{display:flex;align-items:center}
+.logo .t{
+  color:transparent;
+  -webkit-text-stroke:2.4px var(--stroke);
+  paint-order:stroke fill;
+  filter:drop-shadow(0 2px 6px rgba(255,255,255,.55));
+}
+.logo .paw{width:.86em;height:.86em;margin:0 .05em;transform:translateY(-.05em);
+  filter:drop-shadow(0 2px 6px rgba(255,255,255,.55))}
+.logo .paw path,.logo .paw ellipse{fill:none;stroke:var(--stroke);stroke-width:7;
+  stroke-linejoin:round;vector-effect:non-scaling-stroke}
+
+.r1{animation:up 1s cubic-bezier(.22,1,.36,1) 1.2s both}
+.r2{animation:up 1s cubic-bezier(.22,1,.36,1) 1.55s both}
+
+/* วาดเส้นขอบไล่ทีละเส้นตอนเปิด */
+.logo .paw path,.logo .paw ellipse{
+  stroke-dasharray:400;stroke-dashoffset:400;
+  animation:draw 1.4s ease-out 1.9s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ── หัวเรื่องไทย ── */
+h1{margin-top:26px;font-weight:600;color:var(--ink);
+  font-size:clamp(28px,8.2vw,56px);line-height:1.24;
+  text-shadow:0 2px 10px rgba(255,255,255,.6);
+  animation:up 1s cubic-bezier(.22,1,.36,1) 3s both}
+h2{font-weight:400;color:#6B574C;font-size:clamp(17px,4.6vw,32px);line-height:1.5;margin-top:4px;
+  text-shadow:0 2px 8px rgba(255,255,255,.55);
+  animation:up 1s cubic-bezier(.22,1,.36,1) 3.5s both}
+.tagline{margin-top:16px;font-weight:300;color:#8A7568;font-size:clamp(12px,3.2vw,17px);
+  letter-spacing:.06em;animation:up 1s cubic-bezier(.22,1,.36,1) 6.7s both}
+@keyframes up{from{opacity:0;transform:translateY(34px);filter:blur(7px)}
+  to{opacity:1;transform:none;filter:none}}
+
+/* ── GLASS NAV ── */
+.nav{position:absolute;bottom:7%;left:50%;z-index:20;display:flex;gap:12px;padding:13px;
+  border-radius:26px;background:rgba(255,255,255,.34);
+  backdrop-filter:blur(20px) saturate(165%);border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 16px 44px rgba(74,59,52,.22);
+  animation:navUp 1s cubic-bezier(.22,1,.36,1) 5s both}
+@keyframes navUp{from{opacity:0;transform:translate(-50%,80px)}to{opacity:1;transform:translate(-50%,0)}}
+.btn{display:flex;align-items:center;gap:9px;padding:13px 22px;border:none;border-radius:19px;
+  font-family:'Mitr',sans-serif;font-size:clamp(12px,3.4vw,16px);cursor:pointer;
+  transition:transform .25s;white-space:nowrap}
+.btn:hover{transform:translateY(-4px)}
+.btn-primary{background:rgba(255,255,255,.55);color:#4A3B34;border:1px solid rgba(255,255,255,.7)}
+.btn-ghost{background:rgba(255,255,255,.42);color:#5E4C43;border:1px solid rgba(255,255,255,.6)}
+
+/* ── FILM LOOK ── */
+.vignette{position:absolute;inset:0;z-index:30;pointer-events:none;
+  background:radial-gradient(120% 85% at 50% 42%,transparent 50%,rgba(92,62,46,.26) 100%)}
+.grain{position:absolute;inset:-50%;z-index:31;pointer-events:none;opacity:.055;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain .4s steps(3) infinite}
+@keyframes grain{0%{transform:translate(0,0)}33%{transform:translate(-3%,2%)}66%{transform:translate(2%,-2%)}}
+.fadeIO{position:absolute;inset:0;z-index:40;pointer-events:none;background:#FFF9F0;
+  animation:fadeIO var(--T) linear both}
+@keyframes fadeIO{0%{opacity:1}11%{opacity:0}90%{opacity:0}100%{opacity:.4}}
+
+/* ── CONTROLS ── */
+.ui{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:9px}
+.ui button{padding:9px 18px;border:1px solid #4A423D;border-radius:999px;background:#1C1917;
+  color:#F5EFE8;font-family:'Mitr',sans-serif;font-size:12px;cursor:pointer;transition:.2s}
+.ui button:hover{background:#2D2825}
+.rec{color:#FF8A6B!important;border-color:#FF8A6B!important}
+</style>
+</head>
+<body>
+
+<!-- สัญลักษณ์อุ้งเท้า (ใช้ซ้ำ) -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="pawIcon" viewBox="0 0 100 100">
+    <ellipse cx="21" cy="43" rx="11"   ry="14.5" transform="rotate(-20 21 43)"/>
+    <ellipse cx="41" cy="27" rx="11.8" ry="15.5" transform="rotate(-8 41 27)"/>
+    <ellipse cx="64" cy="27" rx="11.8" ry="15.5" transform="rotate(8 64 27)"/>
+    <ellipse cx="84" cy="43" rx="11"   ry="14.5" transform="rotate(20 84 43)"/>
+    <path d="M52 54c19 0 34 11.5 34 25.5C86 92 71.5 97.5 52 97.5S18 92 18 79.5C18 65.5 33 54 52 54Z"/>
+  </symbol>
+</svg>
+
+<div class="frame" id="frame">
+  <div class="camera">
+    <div class="plate"></div>
+    <div class="sunwash"></div>
+
+    <div class="petals">
+      <div class="p">🌸</div><div class="p">🍃</div><div class="p">🌸</div><div class="p">🍂</div>
+      <div class="p">🍃</div><div class="p">🌸</div><div class="p">🍃</div><div class="p">🌼</div>
+    </div>
+
+    <div class="copy">
+      <div class="logo">
+        <div class="row r1">
+          <span class="t">ME</span>
+          <svg class="paw"><use href="#pawIcon"/></svg>
+          <span class="t">W</span>
+        </div>
+        <div class="row r2"><span class="t">WORLD</span></div>
+      </div>
+
+      <h1>ยินดีต้อนรับ</h1>
+      <h2>สู่โลกของเจ้าเหมียว</h2>
+      <p class="tagline">เริ่มต้นการผจญภัย</p>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-primary">＋ เพิ่มสมาชิก</button>
+      <button class="btn btn-ghost">⌗ สแกน QR</button>
+    </div>
+  </div>
+
+  <div class="vignette"></div><div class="grain"></div><div class="fadeIO"></div>
+</div>
+
+<div class="ui">
+  <button onclick="replay()">▶ เล่นซ้ำ</button>
+  <button id="loopBtn" onclick="toggleLoop()">🔁 วนลูป: ปิด</button>
+  <button id="recBtn" onclick="record()">⏺ อัดวิดีโอ</button>
+</div>
+
+<script>
+let looping=false,timer=null;
+
+function replay(){
+  const old=document.getElementById('frame');
+  const clone=old.cloneNode(true);
+  old.replaceWith(clone);
+  clearTimeout(timer);
+  if(looping) timer=setTimeout(replay,8200);
+}
+function toggleLoop(){
+  looping=!looping;
+  document.getElementById('loopBtn').textContent='🔁 วนลูป: '+(looping?'เปิด':'ปิด');
+  clearTimeout(timer);
+  if(looping) replay();
+}
+async function record(){
+  const btn=document.getElementById('recBtn'), ui=document.querySelector('.ui');
+  try{
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60},audio:false});
+    const rec=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp9',videoBitsPerSecond:12e6});
+    const chunks=[];
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));
+      a.download='meow-world-opening.webm';a.click();
+      btn.textContent='⏺ อัดวิดีโอ';btn.classList.remove('rec');ui.style.opacity='1';
+    };
+    ui.style.opacity='0';btn.textContent='● กำลังอัด...';btn.classList.add('rec');
+    replay(); rec.start();
+    setTimeout(()=>rec.stop(),8600);
+  }catch(e){ alert('เบราว์เซอร์ไม่รองรับ หรือคุณยกเลิกการแชร์หน้าจอครับ'); }
+}
+</script>
+</body>
+</html>

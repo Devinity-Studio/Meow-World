@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pet, PetFormData } from '@/types/pet';
+import { Pet, PetInsertPayload } from '@/types/pet';
 import { PetCard } from '@/components/pets/PetCard';
 import { PetForm } from '@/components/pets/PetForm';
 import { createClient } from '@/utils/supabase/client';
+import { logInsertEvidence } from '@/utils/petInsertEvidence';
 
 export default function PetsPage() {
   const router = useRouter();
@@ -15,14 +16,38 @@ export default function PetsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchPets = useCallback(async () => {
     const supabase = createClient();
     try {
       setLoading(true);
+
+      // Get user's home first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('ไม่พบข้อมูลผู้ใช้');
+        return;
+      }
+
+      const { data: homes } = await supabase
+        .from('homes')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1);
+
+      if (!homes || homes.length === 0) {
+        setPets([]);
+        return;
+      }
+
+      const homeId = homes[0].id;
+
+      // Fetch pets for this home
       const { data, error } = await supabase
         .from('pets')
         .select('*')
+        .eq('home_id', homeId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -40,17 +65,36 @@ export default function PetsPage() {
     void fetchPets();
   }, [fetchPets]);
 
-  async function handleCreate(data: PetFormData) {
+  async function handleCreate(data: PetInsertPayload) {
     const supabase = createClient();
     try {
       setSubmitting(true);
-      
+      setFormError(null);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้');
 
+      // Get user's home
+      const { data: homes } = await supabase
+        .from('homes')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1);
+
+      if (!homes || homes.length === 0) {
+        throw new Error('ไม่พบบ้าน กรุณาสร้างบ้านก่อน');
+      }
+
       const { error } = await supabase.from('pets').insert({
         ...data,
-        owner_id: user.id,
+        home_id: homes[0].id,
+      });
+
+      logInsertEvidence('PET_INSERT_DIRECT', {
+        authUid: user.id,
+        homeId: homes[0].id,
+        payload: { ...data, home_id: homes[0].id },
+        error,
       });
 
       if (error) throw error;
@@ -58,14 +102,19 @@ export default function PetsPage() {
       setShowForm(false);
       fetchPets();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเพิ่มสัตว์เลี้ยง';
-      alert(`เกิดข้อผิดพลาด: ${message}`);
+      const message = error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String(error.message)
+          : 'เกิดข้อผิดพลาดในการเพิ่มสัตว์เลี้ยง';
+      setFormError(message);
     } finally {
+
       setSubmitting(false);
     }
   }
 
-  async function handleUpdate(data: PetFormData) {
+  async function handleUpdate(data: PetInsertPayload) {
     if (!editingPet) return;
     const supabase = createClient();
     try {
@@ -132,12 +181,26 @@ export default function PetsPage() {
             <p className="text-gray-600 mt-1">จัดการข้อมูลสัตว์เลี้ยงของคุณ</p>
           </div>
           {!showForm && !editingPet && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              + เพิ่มสัตว์เลี้ยง
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => router.push('/pets/birth')}
+                className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
+              >
+                🐣 บันทึกการเกิด
+              </button>
+              <button
+                onClick={() => router.push('/pets/litters')}
+                className="px-6 py-2 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors"
+              >
+                📋 ประวัติครอก
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                + เพิ่มสัตว์เลี้ยง
+              </button>
+            </div>
           )}
         </div>
 
@@ -148,12 +211,18 @@ export default function PetsPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 {editingPet ? 'แก้ไขข้อมูลสัตว์เลี้ยง' : 'เพิ่มสัตว์เลี้ยงใหม่'}
               </h2>
+              {formError && !editingPet && (
+                <div role="alert" className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  <p className="font-medium">⚠️ {formError}</p>
+                </div>
+              )}
               <PetForm
                 pet={editingPet}
                 onSubmit={editingPet ? handleUpdate : handleCreate}
                 onCancel={() => {
                   setShowForm(false);
                   setEditingPet(undefined);
+                  setFormError(null);
                 }}
                 isLoading={submitting}
               />

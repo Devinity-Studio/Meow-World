@@ -1,336 +1,161 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import VillageScene from '@/components/welcome/VillageScene'
 
-// --- Types matching actual DB schema ---
-interface Pet {
-  id: string;
-  name: string;
-  species: string;
-  breed?: string | null;
-  birth_date?: string | null;
-  avatar_url?: string | null;
-}
+const HINT_MS = 3000
+const IDLE_MS = 8000
+const VISIT_KEY = 'meow_world_visited'
 
-interface JourneyEvent {
-  id: string;
-  pet_id: string | null;
-  home_id: string;
-  event_type: string;
-  content?: string | null;
-  media_urls?: string[] | null;
-  created_at: string;
-}
+export default function WelcomePage() {
+  const router = useRouter()
 
-interface Home {
-  id: string;
-  name: string;
-  owner_id: string;
-}
+  const [mounted, setMounted] = useState(false)
+  const [firstVisit, setFirstVisit] = useState(false)
+  const [hint, setHint] = useState(false)
+  const [idleNudge, setIdleNudge] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [pressed, setPressed] = useState(false)
+  const [entering, setEntering] = useState(false)
 
-export default function HomePage() {
-  const router = useRouter();
-  const supabase = createClient();
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [home, setHome] = useState<Home | null>(null);
-  const [pets, setPets] = useState<Pet[]>([]);
-  const [events, setEvents] = useState<JourneyEvent[]>([]);
-
-  // View Modes
-  const [viewMode, setViewMode] = useState<"empty" | "nesting" | "living">("empty");
-
-  const loadData = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      // 1. ดึง home ที่ user เป็น owner หรือ member
-      const { data: ownedHomes } = await supabase
-        .from("homes")
-        .select("id, name, owner_id")
-        .eq("owner_id", user.id)
-        .limit(1);
-
-      const { data: memberHomes } = await supabase
-        .from("home_members")
-        .select("home_id, homes(id, name, owner_id)")
-        .eq("user_id", user.id)
-        .limit(1);
-
-      let currentHome: Home | null = null;
-
-      if (ownedHomes && ownedHomes.length > 0) {
-        currentHome = ownedHomes[0] as Home;
-      } else if (memberHomes && memberHomes.length > 0) {
-        const h = memberHomes[0] as any;
-        currentHome = h.homes as Home;
-      }
-
-      if (!currentHome) {
-        // ยังไม่มี home -> สร้างใหม่
-        const { data: newHome } = await supabase
-          .from("homes")
-          .insert({ name: "บ้านของเรา", owner_id: user.id })
-          .select()
-          .single();
-
-        if (newHome) {
-          await supabase.from("home_members").insert({
-            home_id: newHome.id,
-            user_id: user.id,
-            role: "owner",
-          });
-          currentHome = newHome as Home;
-        }
-      }
-
-      setHome(currentHome);
-
-      if (!currentHome) {
-        setViewMode("empty");
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. ดึง pets ที่อยู่ใน home นี้
-      const { data: petsData } = await supabase
-        .from("pets")
-        .select("id, name, species, breed, birth_date, avatar_url")
-        .eq("home_id", currentHome.id)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
-      setPets((petsData as Pet[]) || []);
-
-      if (!petsData || petsData.length === 0) {
-        setViewMode("nesting");
-        setIsLoading(false);
-        return;
-      }
-
-      // 3. ดึง events สำหรับ home นี้
-      const { data: eventsData } = await supabase
-        .from("life_journey_events")
-        .select("id, pet_id, home_id, event_type, content, media_urls, created_at")
-        .eq("home_id", currentHome.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      setEvents((eventsData as JourneyEvent[]) || []);
-      setViewMode("living");
-    } catch (error) {
-      console.error("Init Error:", error);
-      setViewMode("empty");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    async function initAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-      setUser({ id: session.user.id, email: session.user.email });
+    const seen = typeof window !== 'undefined' && localStorage.getItem(VISIT_KEY)
+    setFirstVisit(!seen)
+    setMounted(true)
+    if (!seen) {
+      setHint(true)
+      const t = setTimeout(() => setHint(false), HINT_MS)
+      return () => clearTimeout(t)
     }
-    initAuth();
-  }, []);
+  }, [])
+
+  const resetIdle = useCallback(() => {
+    setIdleNudge(false)
+    if (idleTimer.current) clearTimeout(idleTimer.current)
+    idleTimer.current = setTimeout(() => setIdleNudge(true), IDLE_MS)
+  }, [])
 
   useEffect(() => {
-    if (user) loadData();
-  }, [user, loadData]);
+    resetIdle()
+    const evts = ['pointermove', 'pointerdown', 'keydown', 'scroll'] as const
+    evts.forEach((e) => window.addEventListener(e, resetIdle, { passive: true }))
 
-  // --- RENDER ---
+    const onVis = () => {
+      document.documentElement.style.setProperty(
+        '--mw-play', document.hidden ? 'paused' : 'running'
+      )
+    }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-orange-50">
-        <div className="text-center animate-pulse">
-          <div className="text-6xl mb-4">🏠</div>
-          <p className="text-gray-500 font-medium">กำลังเตรียมบ้าน...</p>
-        </div>
-      </div>
-    );
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      evts.forEach((e) => window.removeEventListener(e, resetIdle))
+      document.removeEventListener('visibilitychange', onVis)
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+    }
+  }, [resetIdle])
+
+  const enterHouse = () => {
+    if (entering) return
+    setEntering(true)
+    localStorage.setItem(VISIT_KEY, '1')
+    setTimeout(() => router.push('/world'), 620)
   }
 
-  // 1. Empty
-  if (viewMode === "empty" || !home) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">ยินดีต้อนรับสู่ Meow World</h1>
-          <p className="text-gray-500 mb-6">ระบบกำลังเตรียมพื้นที่ส่วนตัวให้คุณ...</p>
-          <button onClick={() => window.location.reload()} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">
-            รีเฟรชหน้าจอ
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const houseActive = hovered || hint || idleNudge
 
-  // 2. Nesting (มีบ้าน รอรับแมว)
-  if (viewMode === "nesting") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-          <div className="absolute top-10 left-10 text-6xl">🐾</div>
-          <div className="absolute bottom-20 right-10 text-6xl">🧶</div>
-        </div>
-
-        <div className="relative z-10 max-w-md w-full bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-white">
-          <div className="text-7xl mb-6 animate-bounce">📦</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{home.name}</h1>
-          <p className="text-gray-600 mb-8 leading-relaxed">
-            บ้านหลังใหม่พร้อมแล้ว!<br />
-            มาต้อนรับสมาชิกขนฟูคนแรกกันเถอะ
-          </p>
-
-          <button
-            onClick={() => router.push("/pets")}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/30 transition transform hover:scale-[1.02] flex items-center justify-center gap-3 text-lg"
-          >
-            <span>🐱</span> รับน้องเข้าบ้าน
-          </button>
-
-          <button
-            onClick={() => router.push("/pets")}
-            className="mt-4 text-gray-500 hover:text-gray-800 font-medium text-sm underline decoration-dashed"
-          >
-            หรือ ดู Passport ทั้งหมด
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. Living (มีแมว มีเรื่องราว)
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
-      <header className="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{home.name}</h1>
-            <p className="text-sm text-gray-500">
-              {pets.length} สมาชิกขนฟู • {events.length} เรื่องราว
-            </p>
-          </div>
-          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-xl">🏠</div>
-        </div>
-      </header>
-
-      <main className="p-4 space-y-6">
-        {/* Pets Section */}
-        <section>
-          <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-            <span>🐾</span> สมาชิกในบ้าน
-          </h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {pets.map((pet) => (
-              <div
-                key={pet.id}
-                onClick={() => router.push(`/pets/${pet.id}`)}
-                className="flex-shrink-0 w-28 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center cursor-pointer hover:shadow-md transition"
-              >
-                <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto mb-2 flex items-center justify-center text-2xl overflow-hidden">
-                  {pet.avatar_url ? (
-                    <img src={pet.avatar_url} alt={pet.name} className="w-full h-full object-cover" />
-                  ) : (
-                    "🐱"
-                  )}
-                </div>
-                <p className="font-bold text-gray-900 text-sm truncate">{pet.name}</p>
-                <p className="text-xs text-gray-500">{pet.species}</p>
-              </div>
-            ))}
-            <button
-              onClick={() => router.push("/pets")}
-              className="flex-shrink-0 w-28 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-orange-400 hover:text-orange-500 transition"
-            >
-              <span className="text-2xl mb-1">+</span>
-              <span className="text-xs font-medium">เพิ่มน้อง</span>
-            </button>
-          </div>
-        </section>
-
-        {/* Events Feed */}
-        <section>
-          <div className="flex justify-between items-end mb-3">
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span>✨</span> ความทรงจำล่าสุด
-            </h2>
-            <button
-              onClick={() => {
-                if (pets[0]) router.push(`/pets/${pets[0].id}`);
-              }}
-              className="text-xs text-orange-600 font-medium hover:underline"
-            >
-              ดูทั้งหมด
-            </button>
-          </div>
-
-          {events.length === 0 ? (
-            <div className="bg-white p-8 rounded-2xl text-center border border-dashed border-gray-200">
-              <p className="text-gray-400 mb-4">ยังไม่มีเรื่องราวในบ้าน</p>
-              <button
-                onClick={() => {
-                  if (pets[0]) router.push(`/pets/${pets[0].id}`);
-                }}
-                className="text-orange-600 font-bold text-sm hover:underline"
-              >
-                เริ่มเขียนเรื่องแรก
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {events.map((event) => {
-                const pet = pets.find((p) => p.id === event.pet_id);
-                return (
-                  <article
-                    key={event.id}
-                    className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-xs font-bold text-green-700">
-                        {pet?.name?.slice(0, 1).toUpperCase() || "🐱"}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm text-gray-900">{pet?.name || "ความทรงจำ"}</p>
-                        <p className="text-xs text-gray-400">
-                          {new Date(event.created_at).toLocaleDateString("th-TH")}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                        {event.event_type}
-                      </span>
-                    </div>
-                    {event.content && (
-                      <p className="text-gray-600 text-sm leading-relaxed mt-1">{event.content}</p>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      </main>
-
-      {/* FAB Button */}
-      <button
-        onClick={() => {
-          if (pets[0]) router.push(`/pets/${pets[0].id}`);
-        }}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gray-900 text-white rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition z-20"
+    <main
+      className="relative h-[100dvh] w-full overflow-hidden bg-[#FBE7CE]
+                 [&_*]:[animation-play-state:var(--mw-play,running)]"
+    >
+      <div
+        className={`absolute inset-0 transition-all duration-700 ease-out
+          ${mounted ? 'opacity-100 blur-0' : 'opacity-0 blur-md'}
+          ${entering ? 'scale-[1.6] opacity-0 duration-[600ms]' : 'scale-100'}`}
+        style={{ transformOrigin: '68% 62%' }}
       >
-        <span className="text-3xl font-light">+</span>
-      </button>
-    </div>
-  );
+        <VillageScene active={houseActive} pressed={pressed} />
+      </div>
+
+      <button
+        type="button"
+        onClick={enterHouse}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => { setHovered(false); setPressed(false) }}
+        onPointerDown={() => setPressed(true)}
+        onPointerUp={() => setPressed(false)}
+        onFocus={() => setHovered(true)}
+        onBlur={() => setHovered(false)}
+        aria-label="เข้าสู่บ้านของฉัน — โลกของเจ้าเหมียว"
+        className="absolute left-[52%] top-[38%] h-[30%] min-h-[88px] w-[34%] min-w-[88px]
+                   -translate-y-1/2 cursor-pointer rounded-[42%] bg-transparent
+                   outline-none transition-shadow duration-300
+                   focus-visible:shadow-[0_0_0_6px_rgba(255,217,138,.55),0_0_46px_18px_rgba(255,217,138,.4)]"
+      />
+
+      <p
+        aria-hidden="true"
+        className={`pointer-events-none absolute left-[52%] top-[68%] w-[34%] text-center
+                    text-[13px] font-medium tracking-wide text-[#8A6A4B]
+                    transition-opacity duration-700
+                    ${(firstVisit && hint) || idleNudge ? 'opacity-90' : 'opacity-0'}`}
+      >
+        แตะบ้านเพื่อเข้าไป
+      </p>
+
+      <div
+        className={`pointer-events-none absolute left-6 top-10 max-w-[42%] sm:left-12 sm:top-14
+                    transition-all duration-700 delay-150
+                    ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}
+                    ${entering ? 'opacity-0 duration-300' : ''}`}
+      >
+        <h1 className="text-[clamp(20px,3.4vw,34px)] font-extrabold tracking-[.14em] text-[#7A5335]">
+          MEOW WORLD
+        </h1>
+        <p className="mt-4 text-[clamp(16px,2.6vw,26px)] font-semibold leading-snug text-[#8A6446]">
+          ยินดีต้อนรับ
+          <br />
+          <span className="text-[#A97C52]">สู่โลกของเจ้าเหมียว</span>
+        </p>
+      </div>
+
+      <nav
+        aria-label="ทางลัด"
+        className={`absolute inset-x-0 bottom-0 transition-all duration-700 delay-300
+                    ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
+                    ${entering ? 'translate-y-4 opacity-0 duration-300' : ''}`}
+      >
+        <div className="mx-auto mb-[max(16px,env(safe-area-inset-bottom))] flex w-[min(560px,92%)]
+                        items-center justify-around gap-2 rounded-3xl
+                        border border-white/40 bg-white/25 px-4 py-3
+                        shadow-[0_8px_28px_-12px_rgba(122,83,53,.35)]
+                        backdrop-blur-md backdrop-saturate-150">
+          <NavAction icon="＋" label="เพิ่มสมาชิก" onClick={() => router.push('/pets/birth')} />
+          <span className="h-6 w-px bg-white/50" />
+          <NavAction icon="⌁" label="สแกน QR" onClick={() => router.push('/scan')} />
+        </div>
+      </nav>
+    </main>
+  )
+}
+
+function NavAction({
+  icon, label, onClick,
+}: { icon: string; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2
+                 text-[15px] font-medium text-[#7A5335] transition
+                 hover:bg-white/35 active:scale-[.97]
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+    >
+      <span aria-hidden="true" className="text-lg leading-none">{icon}</span>
+      {label}
+    </button>
+  )
 }

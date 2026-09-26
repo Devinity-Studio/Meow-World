@@ -1,9 +1,96 @@
 # 🐱 Meow World — Team Handoff Document
 
 **Version:** Prototype V0 (ต้นแบบ)
-**Date:** 2026-08-31
+**Last Updated:** 2026-09-01
 **Branch:** `qwen-prototype-v0` (main branch สำหรับ development)
 **Repository:** https://github.com/BombINdyBoy/Meow-World
+**Production URL:** https://meow-world-heart-edition.vercel.app
+
+---
+
+## 📊 สถานะปัจจุบัน (อัพเดท: 1 กันยายน 2026)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Feature Status — 2026-09-01                           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Core Features     ████████████████████░░░░  85%       │
+│  QR System         ██████████████████░░░░░░  75%       │
+│  Home Experience   ████████████████░░░░░░░░  70%       │
+│  Production Ready  ██████████████░░░░░░░░░░  65%       │
+│  Documentation     ████████████████████████  100%      │
+│                                                         │
+│  Overall Progress  ████████████████████░░░░  80%       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### สิ่งที่ทำเสร็จล่าสุด (1 กันยายน 2026)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Welcome Entry Screen** | ✅ | Storybook-style, interactive house |
+| **QR Scanner Modal** | ✅ | html5-qrcode, camera integration |
+| **Token Validation API** | ✅ | 4-Layer security model |
+| **Client-side Validation** | ✅ | Helper + QR parser |
+| **Design Spec Documents** | ✅ | 3 ฉบับ |
+| **Production Deploy** | ✅ | Vercel Production |
+| **Test Page** | ✅ | API testing tool |
+| **Product Vision** | ✅ | Core Philosophy & Design Principles |
+
+---
+
+## 🌟 Core Design Principles
+
+> **"Don't tell them what the world is. Let the world tell its own story."**
+> **"ให้ภาพมันเล่าเรื่อง"**
+
+### 10 หลักการออกแบบหลัก
+
+| # | Principle | Description |
+|---|-----------|-------------|
+| 1 | **Free First** | คุณค่าหลักต้องเข้าถึงได้โดยไม่สร้างกำแพง |
+| 2 | **Value Before Revenue** | สร้างคุณค่าให้ผู้ใช้ก่อน รายได้เป็นผลพลอยได้ |
+| 3 | **Visual First** | ให้ภาพและบริบทช่วยสื่อสารแทนข้อความ |
+| 4 | **Let the World Tell the Story** | "ให้ภาพมันเล่าเรื่อง" |
+| 5 | **Data Should Tell the Story** | ข้อมูลสะท้อนประวัติและพฤติกรรมจริง |
+| 6 | **Evaluate Privately** | ประเมินภายในโดยไม่เปิดเผยคะแนนดิบ |
+| 7 | **Rank Without Shaming** | การจัดอันดับไม่ควรทำให้รู้สึกด้อยกว่า |
+| 8 | **Preserve Credit** | ทุก Contribution ควรมีที่มาที่ไป |
+| 9 | **Real Life First** | ส่วนต่อขยายของชีวิตจริง ไม่ใช่สิ่งแทนชีวิตจริง |
+| 10 | **Memories Have Value** | คุณค่าเพราะวันหนึ่งอยากกลับมาดูอีกครั้ง |
+
+### Visual World Principle
+
+> **"ให้ภาพมันเล่าเรื่อง"**
+
+- ผู้ใช้ควรเข้าใจสถานะจากสิ่งที่มองเห็นได้
+- ไม่ต้องใช้ข้อความอธิบายทุกอย่าง
+- Progressive Information: แตะเพื่อดูรายละเอียดเพิ่มเติม
+
+### Life Journey = Core Concept
+
+> **Life Journey ไม่ควรเป็นเพียง Data Timeline แต่เป็น Story of a Life**
+
+- 🐣 วันแรก → 🏠 กลับบ้าน → 🧸 ของเล่น → 🏥 พบแพทย์ → 💉 วัคซีน
+- ข้อมูลสามารถสร้าง AI Story / Short Video ได้
+- Emotional Design: Flashback / Remembrance ไม่ใช่ "ระบบเศร้า"
+
+### Evaluation Philosophy
+
+> **Evaluate Privately. Rank Publicly. Explain Contextually.**
+
+- จำนวนข้อมูล ≠ คุณภาพ
+- ความถี่ ≠ ความใส่ใจ
+- รูปแบบข้อมูลบน Timeline = Quality Signal
+
+### Metaverse Philosophy
+
+> **Tamagotchi 4.0 with Real Life**
+
+- ไม่ใช่โลกที่ต้องเข้าไปอยู่ตลอดเวลา
+- แต่เป็นพื้นที่ที่กลับเข้าไปหาได้เมื่ออยากพบคน/สัตว์/ความทรงจำ
 
 ---
 
@@ -71,7 +158,7 @@ WHERE flag_name = 'decoration';
 | **ชื่อ "Meow World"** | เป็น brand ไม่ใช่ข้อจำกัด |
 | **ทุกสัตว์อยู่ใต้หลังคาเดียวกัน** | เลี้ยงร่วมกันได้ |
 | **ฟีเจอร์เท่าเทียม** | สุนัข might have more features than cats! |
-| **ไม่แยก species** | ไม่รู้สึกเป็น "บุคลากรชั้น 2" |
+| **ไม่แยก species** | ไม่รู้สึกเป็น "บุคลากรชั้น 3" |
 
 ### Species Features
 
@@ -730,58 +817,40 @@ pets ──< life_journey_events (pet_id)
 
 ---
 
-## ⚠️ Known Issues (CRITICAL)
+## ⚠️ Known Issues
 
-### 1. `home_members` RLS Infinite Recursion
+### ✅ FIXED: `home_members` RLS Infinite Recursion
+
+**Status:** Fixed in previous session
 
 **Error:** `infinite recursion detected in policy for relation "home_members"`
 
-**Cause:** Original migration สร้าง policy ที่ query `home_members` ตัวเอง:
-```sql
--- ❌ Policy นี้ cause infinite recursion
-CREATE POLICY "Members can view members" ON public.home_members
-  FOR SELECT USING (
-    home_id IN (SELECT home_id FROM home_members WHERE user_id = auth.uid())
-  );
-```
+**วิธีแก้:** Drop policy ที่ self-reference แล้ว recreate ใหม่
 
-**Impact:** ไม่สามารถ query `homes`, `home_members`, `pets`, หรือ `life_journey_events` ผ่าน API ได้
+### ✅ FIXED: Home Page ติด Empty State
 
-**วิธีแก้:**
-```sql
--- Step 1: ดู policy ที่มีอยู่จริง
-SELECT * FROM pg_policies WHERE tablename = 'home_members';
+**Status:** Fixed in previous session
 
--- Step 2: Drop policy ที่ cause recursion (ใช้ชื่อจริงจาก step 1)
-DROP POLICY IF EXISTS "Members can view members" ON public.home_members;
+**Cause:** Query `homes` fail → setViewMode("empty") → loop
 
--- Step 3: Recreate ไม่มี self-reference
-CREATE POLICY "Users see own membership" ON public.home_members
-  FOR SELECT USING (user_id = auth.uid());
+**วิธีแก้:** ปรับ default viewMode เป็น "nesting" แทน "empty"
 
--- Step 4: Verify
-SELECT * FROM pg_policies WHERE tablename = 'home_members';
-```
+### 🔜 TODO: Google OAuth Redirect URI
 
-### 2. `handle_new_user()` Trigger ไม่ทำงาน
+**Status:** ต้องตั้งค่าบน Supabase
 
-**Cause:** User signup ก่อน apply migration
+**สิ่งที่ต้องทำ:**
+1. Supabase → Authentication → URL Configuration
+2. เพิ่ม Site URL: `https://meow-world-heart-edition.vercel.app`
+3. เพิ่ม Redirect URL: `https://meow-world-heart-edition.vercel.app/auth/callback`
 
-**Workaround:**
-```sql
-INSERT INTO public.profiles (id, display_name)
-VALUES ('USER_UUID_HERE', 'Display Name')
-ON CONFLICT (id) DO NOTHING;
-```
+### 🔜 TODO: Token Expiry Selector
 
-### 3. Home Page ติด Empty State
+**Status:** ยังไม่ทำ
 
-**Flow ที่เกิดขึ้น:**
-1. User login → session สำเร็จ
-2. Query `homes` → ❌ fail (RLS infinite recursion)
-3. Code จับ error → setViewMode("empty")
-4. แสดง "ยินดีต้อนรับสู่ Meow World"
-5. กด "รีเฟรช" → วน loop เดิม
+**Current:** Token หมดอายุ 7 วันอัตโนมัติ
+
+**Future:** ให้ผู้ใช้เลือก expiry (1 วัน, 7 วัน, 30 วัน, ไม่จำกัด)
 
 ---
 
@@ -816,41 +885,502 @@ Branch: qwen-prototype-v0 (development)
 
 ---
 
-## 📋 Roadmap
+## 📋 Roadmap (อัพเดท: 1 กันยายน 2026)
 
-### Phase 1: MVP (ตอนนี้) ← We are here
+> เรียงตามลำดับความสำคัญ — **Home Mode ก่อน** ตาม Core V0 Addendum
 
-- [x] Next.js project foundation
-- [x] Supabase client/server utilities
+---
+
+### Phase 1A: Home Mode Core ✅ (ทำเสร็จแล้ว)
+
+- [x] Next.js project foundation + Supabase setup
 - [x] Authentication flow (Email + Google OAuth)
-- [x] Pet Passport CRUD UI
+- [x] Pet CRUD UI (list, detail, edit)
 - [x] Life Journey timeline UI
 - [x] Home / Family UI
-- [x] Vercel deployment
-- [x] Tailwind CSS styling
-- [ ] **Fix RLS infinite recursion** ← BLOCKER
-- [ ] Fix home page flow (empty → nesting → living)
+- [x] Vercel deployment + Tailwind CSS
+- [x] Fix RLS infinite recursion
+- [x] Feature flag system
+- [x] Multi-species support
+- [x] Nest system
+- [x] Decoration system
+- [x] Family package / storage
+- [x] Community features
+- [x] Vet market features
+
+### Phase 1B: Home Mode — Birth & Identity ✅ (ทำเสร็จแล้ว)
+
+- [x] QR Token adoption flow (create, share, adopt)
+- [x] QR Token viewer (list, revoke, delete)
+- [x] Adopt page (login → preview → adopt + edge cases)
+- [x] Birth/Litter creation (3-step: shared → babies → review)
+- [x] Auto PET-XXXX code generation
+- [x] Auto Life Journey "Chapter 01" creation
+- [x] Progressive Passport view (✓/○ indicators + completeness bar)
+- [x] Litter list page (birth history)
+- [x] Core V0 Addendum documentation
+
+### Phase 1C: QR Token System ✅ (ทำเสร็จแล้ว — 1 กันยายน 2026)
+
+- [x] Welcome / Entry Screen — storybook-style Meow World
+- [x] Interactive House (asymmetrical layout, glass bottom nav)
+- [x] QR Scanner Modal (html5-qrcode)
+- [x] Token Validation API (4-Layer Security)
+- [x] Client-side validation helper
+- [x] Adopt page ใช้ validation API
+- [x] Bottom Nav: "สแกน QR"
+- [x] Design Spec documents (3 ฉบับ)
+- [x] Test page สำหรับ API testing
+- [x] Deploy ขึ้น Vercel Production
+
+### Phase 2A: QR System Complete 🔜 (ทำต่อ)
+
+- [ ] Purpose-based Router (auto-route by context)
+- [ ] Household Invitation Flow
+- [ ] Vet Access Flow
+- [ ] Contest Registration Flow
+- [ ] Token Templates (predefined purposes)
+- [ ] Token Analytics (scan count, conversion)
+
+### Phase 2B: Enhanced Home Experience 🔜
+
+- [ ] Real-time Journey Updates (Supabase Realtime)
+- [ ] Pet Interaction Animations
+- [ ] Photo Upload
+- [ ] Life Journey events with media (photo, video)
+- [ ] Push Notifications (FCM)
+- [ ] Mobile responsive polish
+
+### Phase 3: Visual World Foundation 🔜
+
+> สอดคล้องกับ Product Vision: "ให้ภาพมันเล่าเรื่อง"
+
+- [ ] Home as Visual Space (Interactive House)
+- [ ] Progressive Information UI
+- [ ] Visual Language System (icons, symbols)
+- [ ] Home ID system (บ้านเลขที่)
+- [ ] Multi-Home support (1 User = Multiple Homes)
+
+### Phase 4: Life Journey Enhancement 🔜
+
+> สอดคล้องกับ Product Vision: "Story of a Life"
+
+- [ ] Life Journey as Story (ไม่ใช่แค่ Data Timeline)
+- [ ] AI Story Selection (เลือก Moment ที่มีความหมาย)
+- [ ] Short Video generation (Birthday, Anniversary)
+- [ ] Emotional Design (Flashback / Remembrance)
+- [ ] Temporal Behavior analysis
+
+### Phase 5: Production Readiness 🔜
+
+- [ ] Error Handling Polish
+- [ ] Performance Optimization
+- [ ] SEO & Meta Tags
+- [ ] PWA Support
 - [ ] Test with real user data
 - [ ] Launch to 10-50 beta users
 
-### Phase 2: Growth
+### Phase 6: Family & Social 🔜
 
-- [ ] Family sharing & permissions
-- [ ] Pet avatars & photos
-- [ ] Life Journey events with media
-- [ ] Push notifications
+> สอดคล้องกับ Product Vision: "Relationship"
+
+- [ ] Family sharing & permissions (member, editor, viewer)
+- [ ] Family feed (เรื่องราวร่วมกัน)
+- [ ] Friend / Home Relationship
+- [ ] Home visibility settings
 - [ ] Multi-language support
 
-### Phase 3: Monetization
+### Phase 7: Community & Knowledge 🔜
+
+> สอดคล้องกับ Product Vision: "Meow Wiki"
+
+- [ ] Community platform
+- [ ] Meow Wiki (knowledge base)
+- [ ] Contributor recognition (Hall of Fame)
+- [ ] Article versioning (ต้นแบบ → การต่อยอด)
+
+### Phase 8: Visual Town 🔜
+
+> สอดคล้องกับ Product Vision: "Visual World"
+
+- [ ] Town Overview
+- [ ] Town Emotion (activity density)
+- [ ] Walk Mode (Street View style)
+- [ ] Home discovery
+
+### Phase 9: Evaluation System 🔜
+
+> สอดคล้องกับ Product Vision: "Evaluate Privately"
+
+- [ ] Internal Quality Signals
+- [ ] Temporal Behavior analysis
+- [ ] Context Events handling
+- [ ] Visual Reputation (ไม่ใช่ตัวเลข)
+
+### Phase 10: Monetization 🔜
 
 - [ ] Premium features (Freemium model)
 - [ ] Digital certificates
-- [ ] QR sharing
 - [ ] Marketplace integration
+- [ ] Advanced storage management
 
 ### Out of Scope (for now)
 
-QR, Marketplace, Biometrics, Advanced Storage, Social, AI Features, Gamification, Subscription, Multi-species ecosystem, Graphic Engine
+- Biometrics
+- AI Features (ยกเว้น Life Journey Video)
+- Gamification
+- Graphic Engine
+- VR / Immersive Interface
+- Internal Currency / Meow Points
+
+---
+
+## 🏡 Welcome / Entry Screen: Meow World
+
+**Purpose:** ออกแบบหน้าจอ Welcome / Entry Screen สำหรับ MEOW WORLD — ให้ผู้ใช้รู้สึกเหมือนกำลังเปิดประตูเข้าสู่ "โลกของเจ้าเหมียว"
+
+> **หลักสำคัญ:** ไม่ใช่หน้าเว็บไซต์หรือหน้า Login ทั่วไป ภาพควรมีบรรยากาศเหมือน **storybook illustration ที่มีชีวิต** อบอุ่น น่ารัก มี depth และมีพื้นที่สำหรับ animation เล็ก ๆ ในอนาคต
+
+---
+
+### Layout
+
+ใช้ Layout แบบ **Asymmetrical Composition** ไม่จัดทุกอย่างไว้ตรงกลาง
+
+* ด้านซ้ายเป็นพื้นที่สำหรับ Brand และข้อความ
+* ด้านขวาเป็นฉากหลักของโลก Meow World
+* ห้ามวาง Main Button ขนาดใหญ่ตรงกลาง
+* ห้ามใช้ Card หรือ Panel หนัก ๆ
+* ให้ภาพเป็นพระเอกของหน้าจอ
+
+---
+
+### ด้านซ้าย
+
+แสดงข้อความ:
+
+**MEOW WORLD**
+
+**ยินดีต้อนรับสู่โลกของเจ้าเหมียว**
+
+Typography อบอุ่น เป็นมิตร อ่านง่าย แต่ไม่กินพื้นที่มากเกินไป
+
+ไม่ต้องมีปุ่ม "เริ่มสร้างโลก" ใต้ข้อความ
+
+---
+
+### ฉากด้านขวา
+
+สร้างหมู่บ้านเล็ก ๆ ที่อบอุ่นและมีชีวิต
+
+มีองค์ประกอบ:
+
+* บ้านหลังหนึ่งเป็นจุดเด่น
+* ครอบครัวอยู่บริเวณบ้าน
+* แมวอยู่ใกล้บ้าน
+* ต้นไม้
+* หญ้าและดอกไม้
+* นกบนท้องฟ้า
+* แสงพระอาทิตย์อุ่น ๆ
+* foreground เช่น ใบไม้หรือดอกไม้ เพื่อสร้าง depth
+
+Composition ต้องมี **foreground / midground / background** อย่างชัดเจน
+
+---
+
+### Interactive House
+
+บ้านหลังหลักคือ **Interactive Hotspot**
+
+สำคัญมาก:
+
+* **อย่าวาดกรอบปุ่มรอบบ้าน**
+* **อย่าวาดปุ่ม UI ทับบ้าน**
+* **อย่าใส่คำว่า "Click here"**
+
+บ้านต้องดูเหมือนเป็นส่วนหนึ่งของโลกจริง ๆ แต่มี visual cue เล็ก ๆ ว่า "แตะได้"
+
+เช่น:
+
+* แสงอ่อน ๆ รอบบ้าน
+* หน้าต่างมีแสง
+* แมวหันมาทางผู้ใช้
+* ประกายเล็ก ๆ
+* subtle glow
+* บ้านมีความรู้สึกมีชีวิต
+
+แนวคิดคือ:
+
+> **ผู้ใช้แตะบ้าน → บ้านจะกลายเป็น "บ้านของฉัน" → จากนั้นเข้าสู่โลกของผู้ใช้**
+
+ดังนั้นบ้านต้องเป็นจุด Interactive ที่สำคัญที่สุดของหน้าจอ
+
+---
+
+### Animation-friendly design
+
+ออกแบบภาพโดยเผื่อการทำ Motion Animation ภายหลัง:
+
+* แสงพระอาทิตย์สามารถเคลื่อนช้า ๆ
+* นกสามารถบินผ่าน
+* แมวสามารถกระดิกหาง / กระพริบตา
+* ใบไม้สามารถไหวเบา ๆ
+* หญ้าและดอกไม้สามารถขยับ
+* ประกายเล็ก ๆ สามารถกระพริบ
+* ผ้าม่านหรือองค์ประกอบในบ้านสามารถขยับเบา ๆ
+
+Animation ต้อง subtle และ slow — ไม่ให้ดูเหมือน video หรือ advertisement
+
+---
+
+### Bottom Navigation
+
+ด้านล่างของหน้าจอมีเพียง 2 secondary actions:
+
+**＋ เพิ่มสมาชิก**
+
+**⌁ สแกน QR**
+
+ทำเป็น **minimal translucent glass navigation**
+
+* พื้นหลังโปร่งใสประมาณ 70–80%
+* blur เล็กน้อย
+* ไม่มีกรอบหนา
+* ไม่มีสีฉูดฉาด
+* ไม่ให้แย่งความสนใจจากบ้าน
+
+สอง action นี้เป็นเพียงทางลัด และมีความสำคัญรองจาก Interactive House
+
+---
+
+### Visual hierarchy
+
+ลำดับความสำคัญ:
+
+1. Interactive House / World
+2. MEOW WORLD + Welcome message
+3. Add Member / QR Scan
+
+ภาพรวมต้องรู้สึก:
+
+> **Warm / Magical / Cozy / Playful / Storybook / Living World**
+
+* ไม่ต้องดูเหมือน Corporate App
+* ไม่ต้องดูเหมือน Dashboard
+* ไม่ต้องดูเหมือน Login Screen
+* ไม่ต้องใช้ UI แบบเว็บสมัยใหม่ที่มี Card เยอะ ๆ
+
+Aspect ratio: **16:9** — ออกแบบสำหรับ Mobile-first experience แต่สามารถนำไป adapt กับ Tablet/Desktop ได้
+
+ภาพควรมีพื้นที่ว่างเพียงพอสำหรับ UI และ animation ในอนาคต
+
+---
+
+## 🐣 Core V0 Addendum: Birth → Identity → Home/Context/Role
+
+**Purpose:** เอกสารข้อกำหนดและแนวคิดเพิ่มเติมสำหรับ Prototype V0
+
+> **หลักสำคัญ:** Core ต้องชัด แต่ Implementation ยังเปิดกว้างสำหรับการทดลองและปรับปรุง
+
+---
+
+### Part 1 — Birth → First Life Journey → Progressive Passport
+
+#### 1. แนวคิดหลัก
+
+> **Create Identity First. Complete It Over Time.**
+
+ระบบควรเริ่มต้น Identity ของสัตว์ได้ตั้งแต่วันเกิด แม้ข้อมูลยังไม่สมบูรณ์
+
+**เกิด → จับกลุ่ม → ข้อมูลเบื้องต้น → Pet ID → First Life Journey → Progressive Passport**
+
+#### 2. Birth Event / Litter
+
+ข้อมูลที่เหมือนกันเก็บในระดับ **Litter / Birth Context** เพื่อลดการกรอกซ้ำ:
+
+* พ่อ, แม่, วันที่เกิด, สถานที่, สายพันธุ์ที่คาดหมาย, บริบทการเกิด, ผู้บันทึก
+
+จากนั้นแต่ละ Baby มีข้อมูลเฉพาะของตัวเอง
+
+#### 3. ลดการกรอกข้อมูลซ้ำ
+
+**Create Litter → Shared Information ครั้งเดียว → เพิ่มสมาชิกแต่ละตัว**
+
+ข้อมูลที่ Override รายตัวได้: วันเกิด, น้ำหนัก, สี, ลักษณะพิเศษ, รูป, ชื่อเรียก
+
+กรณีเกิดข้ามวัน ใช้วันที่ของตัวแรกเป็น Birth Date เบื้องต้น แก้ไขภายหลังได้
+
+#### 4. Initial Pet Information
+
+ควรใช้ Dropdown / Checkbox / Selection เป็นหลัก ลดการพิมพ์และข้อมูลผิดรูปแบบ
+
+ข้อมูลที่ไม่ทราบ: **ข้าม → บันทึกก่อน → เติมภายหลัง**
+
+#### 5. Parent Relationship
+
+* มี Identity อยู่แล้ว → เลือก Parent → เชื่อม Relationship
+* ยังไม่มี → สร้าง Parent Reference → เชื่อมภายหลังได้
+
+ไม่ควรบังคับให้ Parent มี Passport สมบูรณ์ก่อน
+
+#### 6. First Life Journey
+
+Birth Event = Life Journey Event แรก
+
+ข้อความสามารถปรับตาม Context:
+
+| Context | สิ่งที่เน้น |
+|---|---|
+| **Home** | เรื่องราว, ความทรงจำ |
+| **Farm** | ความรวดเร็ว, ข้อมูลสำคัญ |
+| **Vet** | ข้อมูลการดูแล |
+
+#### 7. Progressive Passport
+
+Passport เป็น **Living / Progressive Identity Record**
+
+```
+Day 1:     Photo + Pet ID + Birth + Basic Info
+ภายหลัง:   + Parent + Health + Documents
+สุดท้าย:   + Biometrics + Certificates + Verified Evidence
+```
+
+---
+
+### Part 2 — Home → Context → Role → Work Mode
+
+#### 8. Home = Personal Anchor
+
+> Home คือ Personal Anchor ของผู้ใช้งาน ไม่ใช่ "บ้านที่มีสัตว์"
+
+ผู้ใช้สร้าง Home ได้แม้ยังไม่มีสัตว์เลี้ยงเลย
+
+#### 9. Context
+
+ผู้ใช้ 1 คนมีหลาย Context ได้:
+
+```
+User
+├── Personal Home
+├── Farm A
+├── Farm B
+└── Vet Clinic
+```
+
+ไม่ควรออกแบบ Account ให้เป็นประเภทเดียว เพราะคนเดียวมีหลายบทบาทได้
+
+#### 10. Farm / Vet = Workspace / Organization
+
+Farm และ Vet Clinic เป็น Entity แยกจาก User:
+
+```
+Farm A
+├── Owner
+├── Partner
+├── Staff
+└── Vet
+```
+
+ผู้ใช้แต่ละคนเข้าร่วม Entity ด้วย Role ที่แตกต่างกัน
+
+#### 11. Role ไม่เปลี่ยน Identity
+
+```
+User A
+├── Personal Home → Pet Parent
+├── Farm A → Staff
+└── Vet Clinic → Staff / Vet
+```
+
+Role = ความสัมพันธ์ระหว่าง User กับ Context ไม่ใช่ประเภทถาวรของ Account
+
+#### 12. Default Context
+
+เมื่อไม่มี Work Context: **Default = Personal Home**
+
+เมื่อเข้าร่วม Farm → เปลี่ยน Default Context ได้:
+
+```
+Home → Joined Farm A → Role: Staff
+Default → Farm A
+→ Today's Tasks, Animals, Birth, Records
+```
+
+#### 13. Default Context ≠ Identity
+
+การเปลี่ยน Default ไม่เปลี่ยนตัวตนหรือ Role
+
+#### 14. Personal Home ต้องคงอยู่เสมอ
+
+```
+User
+├── Personal Home → My Pets
+└── Farm A → Role: Staff
+```
+
+เปลี่ยน Default กลับ Personal Home ได้ตลอด
+Membership ใน Farm A ยังคงอยู่
+
+---
+
+### Part 3 — UX Principle
+
+#### 15. Home = Smart Launcher
+
+Home เชื่อม: **User → Context → Role → Tools**
+
+```
+Staff:    App → Farm A → Today's Work → เริ่มงาน
+Vet:      App → Vet Clinic → Today's Patients → เริ่มงาน
+Pet Parent: App → Personal Home → My Pets → Life Journey
+```
+
+---
+
+### Part 4 — Farm Evidence / Trust
+
+#### 16. Farm สามารถสะสม Evidence ได้
+
+เอกสารที่เก็บได้:
+
+* ทะเบียนพาณิชย์, เอกสารจดทะเบียน, ใบอนุญาต, เอกสารรับรอง
+
+สถานะ: **Uploaded → Digitized → Verified**
+
+#### 17. Trust ไม่ใช่ Binary
+
+ควรแสดง:
+
+* มี Identity → มี Evidence → มีเอกสารประกอบ → มี Verified Evidence
+
+> ระบบไม่ได้รับรองผู้ใช้ แต่ช่วยสร้างโครงสร้างให้สะสมหลักฐานและเพิ่มความน่าเชื่อถือ
+
+---
+
+### Part 5 — Core Philosophy
+
+#### 18. สิ่งที่ควรรักษาเป็น Core
+
+1. Identity สามารถเกิดก่อนข้อมูลสมบูรณ์
+2. Shared Information ไม่ควรถูกกรอกซ้ำ
+3. Birth เป็นจุดเริ่มต้นของ Life Journey
+4. Passport สมบูรณ์ขึ้นตามเวลา
+5. Home = Personal Anchor
+6. Context = สิ่งที่ผู้ใช้เข้าไปทำงาน
+7. Role = ความสัมพันธ์กับ Context
+8. Default Context ลดขั้นตอนการเข้าถึงงาน
+9. Pet Identity ไม่ผูกถาวรกับ Farm หรือ Owner
+10. Evidence เพิ่มความน่าเชื่อถือ แต่ไม่เท่ากับการรับรอง
+
+#### 19. Implementation Philosophy
+
+Prototype V0 = Core Flow ที่ทำงานได้จริงก่อน
+
+หลักการ: **Build → Branch → Compare → Compose → Validate → Merge**
+
+ไม่จำเป็นต้องเลือก A หรือ B ทั้งระบบ — สามารถเลือกจุดที่ดีที่สุดจากแต่ละ Branch
+
+> **Prototype V0 คือ DNA ของระบบ ไม่ใช่กรงที่ปิดกั้นการพัฒนา**
 
 ---
 

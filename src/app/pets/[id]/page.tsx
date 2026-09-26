@@ -6,6 +6,9 @@ import { Pet, LifeJourneyEvent, LifeJourneyEventFormData } from '@/types/pet';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { createClient } from '@/utils/supabase/client';
+import { ShareButton } from '@/components/qr/ShareButton';
+import { TokenList } from '@/components/qr/TokenList';
+import { ProgressivePassport } from '@/components/passport/ProgressivePassport';
 
 const EVENT_TYPES = [
   { value: 'medical', label: 'การรักษาพยาบาล', color: 'bg-red-100 text-red-800' },
@@ -25,6 +28,8 @@ export default function PetDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showTokens, setShowTokens] = useState(false);
+  const [showPassport, setShowPassport] = useState(false);
 
   const supabase = createClient();
 
@@ -41,11 +46,12 @@ export default function PetDetailPage() {
       if (petError) throw petError;
       setPet(petData);
 
+      // Query life_journey_events using created_at for ordering
       const { data: eventsData, error: eventsError } = await supabase
         .from('life_journey_events')
         .select('*')
         .eq('pet_id', petId)
-        .order('event_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (eventsError) throw eventsError;
       setEvents(eventsData || []);
@@ -66,11 +72,35 @@ export default function PetDetailPage() {
     try {
       setSubmitting(true);
 
+      // Get user's home_id for the event
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้');
+
+      const { data: homes } = await supabase
+        .from('homes')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1);
+
+      if (!homes || homes.length === 0) {
+        throw new Error('ไม่พบบ้าน');
+      }
+
+      // Map form data to DB fields
+      // title + description → content field
+      // event_date is stored as metadata in content or just use created_at
+      const contentParts: string[] = [];
+      if (data.title) contentParts.push(data.title);
+      if (data.description) contentParts.push(data.description);
+
       const { error } = await supabase
         .from('life_journey_events')
         .insert({
-          ...data,
           pet_id: petId,
+          home_id: homes[0].id,
+          author_id: user.id,
+          event_type: data.event_type,
+          content: contentParts.join('\n'),
         });
 
       if (error) throw error;
@@ -140,15 +170,42 @@ export default function PetDetailPage() {
                 {age && ` • ${age}`}
               </p>
             </div>
-            <button
-              onClick={() => router.push(`/pets/${petId}/edit`)}
-              className="px-4 py-2 text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
-            >
-              แก้ไขข้อมูล
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowPassport(true)}
+                className="px-4 py-2 bg-gradient-to-r from-[#1F1E1D] to-[#2D2A26] text-white rounded-md hover:opacity-90 text-sm font-bold"
+              >
+                📋 Passport
+              </button>
+              <ShareButton petId={petId} petName={pet.name} />
+              <button
+                onClick={() => setShowTokens(true)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                🔑 Tokens
+              </button>
+              <button
+                onClick={() => router.push(`/pets/${petId}/edit`)}
+                className="px-4 py-2 text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
+              >
+                แก้ไขข้อมูล
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+            {pet.nickname && (
+              <div>
+                <p className="text-sm text-gray-500">ชื่อเล่น</p>
+                <p className="font-medium">{pet.nickname}</p>
+              </div>
+            )}
+            {pet.gender && (
+              <div>
+                <p className="text-sm text-gray-500">เพศ</p>
+                <p className="font-medium">{pet.gender}</p>
+              </div>
+            )}
             {pet.birth_date && (
               <div>
                 <p className="text-sm text-gray-500">วันเกิด</p>
@@ -157,22 +214,16 @@ export default function PetDetailPage() {
                 </p>
               </div>
             )}
-            {pet.weight && (
+            {pet.color && (
               <div>
-                <p className="text-sm text-gray-500">น้ำหนัก</p>
-                <p className="font-medium">{pet.weight} กก.</p>
+                <p className="text-sm text-gray-500">สี</p>
+                <p className="font-medium">{pet.color}</p>
               </div>
             )}
             <div>
               <p className="text-sm text-gray-500">สร้างเมื่อ</p>
               <p className="font-medium">
                 {format(new Date(pet.created_at), 'd MMM yyyy', { locale: th })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">อัปเดตล่าสุด</p>
-              <p className="font-medium">
-                {format(new Date(pet.updated_at), 'd MMM yyyy HH:mm', { locale: th })}
               </p>
             </div>
           </div>
@@ -210,6 +261,11 @@ export default function PetDetailPage() {
             <div className="space-y-4">
               {events.map((event) => {
                 const eventType = EVENT_TYPES.find(e => e.value === event.event_type);
+                // Parse content to extract title and description
+                const contentLines = (event.content || '').split('\n');
+                const title = contentLines[0] || 'ไม่มีหัวข้อ';
+                const description = contentLines.slice(1).join('\n') || null;
+
                 return (
                   <div
                     key={event.id}
@@ -222,12 +278,12 @@ export default function PetDetailPage() {
                             {eventType?.label || event.event_type}
                           </span>
                           <span className="text-sm text-gray-500">
-                            {format(new Date(event.event_date), 'd MMM yyyy', { locale: th })}
+                            {format(new Date(event.created_at), 'd MMM yyyy', { locale: th })}
                           </span>
                         </div>
-                        <h4 className="font-semibold text-gray-900">{event.title}</h4>
-                        {event.description && (
-                          <p className="text-gray-600 mt-1">{event.description}</p>
+                        <h4 className="font-semibold text-gray-900">{title}</h4>
+                        {description && (
+                          <p className="text-gray-600 mt-1">{description}</p>
                         )}
                       </div>
                       <button
@@ -244,6 +300,16 @@ export default function PetDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Token List Modal */}
+      {showTokens && (
+        <TokenList petId={petId} onClose={() => setShowTokens(false)} />
+      )}
+
+      {/* Progressive Passport Modal */}
+      {showPassport && (
+        <ProgressivePassport petId={petId} onClose={() => setShowPassport(false)} />
+      )}
     </div>
   );
 }
@@ -355,7 +421,7 @@ function calculateAge(birthDate: string): string {
   const now = new Date();
   const years = now.getFullYear() - birth.getFullYear();
   const months = now.getMonth() - birth.getMonth();
-  
+
   if (years > 0) {
     return `${years} ปี`;
   } else if (months > 0) {
