@@ -95,3 +95,46 @@ export function colorCountLabel(colors: string[]): string {
   if (colors.length === 1) return 'สีเดียว';
   return `${colors.length} สี`;
 }
+
+/**
+ * Color Pattern — separate semantic from Colors (PET_APPEARANCE_MODEL).
+ * Vocabulary is locked by the DB CHECK constraint `pets_color_pattern_allowed`
+ * (migration 20260926100000) — these are the ONLY values the system can store,
+ * so the input offers exactly this list. Stored as English key, displayed Thai.
+ */
+export interface PatternOption {
+  value: string;
+  label: string;
+}
+
+export const PATTERN_OPTIONS: PatternOption[] = [
+  { value: 'solid', label: 'สีเดียว' },
+  { value: 'bicolor', label: 'สองสี' },
+  { value: 'tricolor', label: 'สามสี' },
+  { value: 'tabby', label: 'ลายสลิด / ลายเสือ' },
+  { value: 'calico', label: 'สามสีลายจุด (calico)' },
+  { value: 'tortoiseshell', label: 'ส้มดำปน (tortie)' },
+  { value: 'tuxedo', label: 'สูททักซิโด้' },
+  { value: 'pointed', label: 'ปลายสีเข้ม (วิเชียรมาศ)' },
+  { value: 'other', label: 'อื่น ๆ' },
+];
+
+/**
+ * Normalize + validate a pattern input against the storage vocabulary.
+ * '' / whitespace / undefined → null (optional field) — mirrors the Direct Add
+ * boundary. A value outside the vocabulary is rejected (DB CHECK would reject
+ * it too — fail early with a readable reason).
+ */
+export type PatternValueResult =
+  | { invalid: false; value: string | null }
+  | { invalid: true; reason: string };
+
+export function normalizePatternValue(raw: string | null | undefined): PatternValueResult {
+  const trimmed = raw?.trim() || null;
+  if (trimmed === null) return { invalid: false, value: null };
+  if (PATTERN_OPTIONS.some((p) => p.value === trimmed)) return { invalid: false, value: trimmed };
+  return {
+    invalid: true,
+    reason: `ลักษณะสีไม่อยู่ในรายการที่ระบบรองรับ (id: ${trimmed})`,
+  };
+}

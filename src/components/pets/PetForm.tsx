@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Pet, PetFormData, PetInsertPayload } from '@/types/pet';
-import { SPECIES_OPTIONS, BREED_OPTIONS, COLOR_OPTIONS, joinColors, splitColors, colorCountLabel } from './petFormOptions';
+import { SPECIES_OPTIONS, BREED_OPTIONS, COLOR_OPTIONS, PATTERN_OPTIONS, joinColors, splitColors, colorCountLabel, normalizePatternValue } from './petFormOptions';
 
 interface PetFormProps {
   pet?: Pet;
@@ -22,6 +22,13 @@ interface PetFormProps {
  * which is our reference behavior for pet creation.
  */
 export function toPetInsertPayload(form: PetFormData): PetInsertPayload {
+  // Pattern: normalize + validate against the CHECK-locked vocabulary.
+  // Invalid values cannot reach the DB (fail at the boundary with a readable
+  // reason surfaced by the caller through formError).
+  const pattern = normalizePatternValue(form.color_pattern);
+  if (pattern.invalid) {
+    throw new Error(pattern.reason);
+  }
   return {
     name: form.name,
     species: form.species,
@@ -30,6 +37,7 @@ export function toPetInsertPayload(form: PetFormData): PetInsertPayload {
     gender: form.gender || null,
     birth_date: form.birth_date || null,
     color: form.color?.trim() || null,
+    color_pattern: pattern.value,
   };
 }
 
@@ -42,6 +50,7 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
     gender: pet?.gender || '',
     birth_date: pet?.birth_date ? pet.birth_date.substring(0, 10) : '',
     color: pet?.color || '',
+    color_pattern: pet?.color_pattern || '',
   });
   const knownBreed = BREED_OPTIONS.some((b) => b.value === formData.breed);
   const [customBreed, setCustomBreed] = useState(!!formData.breed && !knownBreed);
@@ -199,9 +208,32 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
             {colorCountLabel(splitColors(formData.color))
               ? `🎨 ${colorCountLabel(splitColors(formData.color))} — เลือกได้หลายสี เช่น มู่ทู่ คือ ส้ม ขาว`
               : 'เลือกได้หลายสี — เช่น มู่ทู่ คือ ส้ม ขาว'}
-            {'' }
           </p>
         </div>
+      </div>
+
+      {/* Color Pattern — separate semantic from Colors (PET_APPEARANCE_MODEL);
+          vocabulary locked by pets_color_pattern_allowed CHECK */}
+      <div>
+        <label htmlFor="color_pattern" className="block text-sm font-medium text-gray-700 mb-1">
+          ลักษณะสี (Pattern)
+        </label>
+        <select
+          id="color_pattern"
+          value={formData.color_pattern}
+          onChange={(e) => setFormData({ ...formData, color_pattern: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">-- ไม่ระบุ --</option>
+          {PATTERN_OPTIONS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 mt-1">
+          จำนวนสีระบบนับให้เอง — ลักษณะสีบอกว่าสีกระจายบนตัวอย่างไร (เช่น สามสี หรือ ลายสลิด)
+        </p>
       </div>
 
       <div>

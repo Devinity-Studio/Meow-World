@@ -8,6 +8,8 @@ export interface Pet {
   gender?: string | null;
   birth_date?: string | null;
   color?: string | null;
+  /** Color Pattern key (solid/bicolor/tricolor/…) — CHECK-locked vocabulary, migration 20260926100000 */
+  color_pattern?: string | null;
   avatar_url?: string | null;
   is_active: boolean;
   created_at: string;
@@ -38,6 +40,8 @@ export interface PetInsertPayload {
   gender?: string | null;
   birth_date?: string | null;
   color?: string | null;
+  /** CHECK-locked vocabulary — null when not provided */
+  color_pattern?: string | null;
 }
 
 export interface PetFormData {
@@ -48,6 +52,8 @@ export interface PetFormData {
   gender?: string;
   birth_date?: string;
   color?: string;
+  /** raw pattern key (or '' when untouched) — normalized at the boundary */
+  color_pattern?: string;
   weight?: number;
 }
 

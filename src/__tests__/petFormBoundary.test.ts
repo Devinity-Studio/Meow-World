@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toPetInsertPayload } from '@/components/pets/PetForm';
-import { joinColors, splitColors, colorCountLabel, COLOR_OPTIONS } from '@/components/pets/petFormOptions';
+import { joinColors, splitColors, colorCountLabel, COLOR_OPTIONS, PATTERN_OPTIONS, normalizePatternValue } from '@/components/pets/petFormOptions';
 import { PetFormData } from '@/types/pet';
 
 /**
@@ -33,6 +33,7 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
       gender: null,
       birth_date: null,
       color: null,
+      color_pattern: null,
     });
   });
 
@@ -51,6 +52,7 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
         gender: 'Male',
         birth_date: '2026-09-26',
         color: 'เทา',
+        color_pattern: 'tricolor',
       })
     );
     expect(payload).toEqual({
@@ -61,6 +63,7 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
       gender: 'Male',
       birth_date: '2026-09-26',
       color: 'เทา',
+      color_pattern: 'tricolor',
     });
   });
 
@@ -114,5 +117,43 @@ describe('color semantics — pattern words are not colors', () => {
     expect(colorCountLabel(['ส้ม'])).toBe('สีเดียว');
     expect(colorCountLabel(['ส้ม', 'ขาว'])).toBe('2 สี');
     expect(colorCountLabel(['ส้ม', 'ขาว', 'ดำ'])).toBe('3 สี');
+  });
+});
+
+describe('Pattern Input — vocabulary-locked semantic (separate from Colors)', () => {
+  it('offers exactly the CHECK-locked vocabulary, nothing invented', () => {
+    expect(PATTERN_OPTIONS.map((p) => p.value)).toEqual([
+      'solid', 'bicolor', 'tricolor', 'tabby', 'calico', 'tortoiseshell', 'tuxedo', 'pointed', 'other',
+    ]);
+  });
+
+  it('no pattern → null (optional field, contract of the boundary)', () => {
+    expect(normalizePatternValue('')).toEqual({ invalid: false, value: null });
+    expect(normalizePatternValue(undefined)).toEqual({ invalid: false, value: null });
+    expect(normalizePatternValue('   ')).toEqual({ invalid: false, value: null });
+    const payload = toPetInsertPayload(baseForm({ color_pattern: '' }));
+    expect(payload.color_pattern).toBeNull();
+  });
+
+  it('valid pattern → passes through as the storage key', () => {
+    expect(normalizePatternValue('tricolor')).toEqual({ invalid: false, value: 'tricolor' });
+    expect(normalizePatternValue('  tabby  ')).toEqual({ invalid: false, value: 'tabby' });
+    const payload = toPetInsertPayload(baseForm({ color_pattern: 'tricolor' }));
+    expect(payload.color_pattern).toBe('tricolor');
+  });
+
+  it('pattern outside the vocabulary → rejected at the boundary (DB CHECK would also reject)', () => {
+    const result = normalizePatternValue('สามสี'); // Thai display word is not a storage key
+    expect(result.invalid).toBe(true);
+    if (result.invalid) expect(result.reason).toMatch(/รายการที่ระบบรองรับ/);
+    expect(() => toPetInsertPayload(baseForm({ color_pattern: 'rainbow' }))).toThrow(/รายการที่ระบบรองรับ/);
+  });
+
+  it('existing pets still read fine: pattern absent → field untouched, colors semantics intact', () => {
+    const payload = toPetInsertPayload(baseForm());
+    expect(payload).not.toHaveProperty('color_pattern', 'solid'); // never invented
+    expect(payload.color_pattern).toBeNull();
+    expect(payload.color).toBeNull(); // colors boundary unchanged
+    expect(splitColors('ส้ม ขาว')).toEqual(['ส้ม', 'ขาว']); // existing data reads the same
   });
 });
