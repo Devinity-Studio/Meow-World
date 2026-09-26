@@ -29,6 +29,7 @@ interface HomeModeProps {
     video_url?: string;
     location?: string;
   }) => void;
+  /** Drift Inventory: like/comment ยังไม่มี storage — no-op จนกว่าตารางจะมีจริง */
   onToggleLike: (eventId: string) => void;
   onAddComment: (eventId: string, commentText: string) => void;
   onDeleteEvent?: (eventId: string) => void;
