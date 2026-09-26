@@ -4,6 +4,11 @@
 **Scope:** เอกสารตัดสินเท่านั้น — **ไม่มีข้อมูลใดถูกแก้/ลบ** จนกว่า owner จะอนุมัติจาก matrix
 **หลัก:** Evidence → Decision → Action · "อย่าลบเพียงเพราะดูเป็น test data" — ตอบ 5 คำถามต่อรายการ
 
+> **สถานะ: EXECUTED + VERIFIED (2026-09-26)** — owner รัน Pre-flight → Execute → Read-back ใน SQL Editor แล้ว:
+> events 8→**5** · pets 4→**3** · PET-0003 → `Cat / ส้ม ขาว / tricolor` ✅ · PET-0004 ไม่มีแล้ว ✅ ·
+> Litters คงอยู่ครบ 15 (PRESERVE ตาม matrix — รักษา continuity ของตัวนับ) · E1/E5–E8 PRESERVE ครบ
+> *(REST-layer re-verification ถูกขวางด้วย session expiry — บันทึกตามสัจจะ; read-back ชั้น SQL จาก owner ครบทุกข้อ)*
+
 **บริบทของบ้าน:** `6624b327-144f-4ad9-9713-c874a601696e` "บ้านของเรา" · author ทุก event = `9492124e…` (BombINdyBoy)
 
 ---

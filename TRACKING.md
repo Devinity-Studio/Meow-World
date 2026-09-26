@@ -20,9 +20,10 @@
 | Event Payload + Home-integrity | ✅ CLOSED | `buildJourneyEventPayload` gate ก่อน POST — `8a5433a`, 50/50 |
 | Home Mode | ✅ CLOSED | orphan UI → production-backed — wire `a7e1ab3` + fixes `eb1602d`/`1c32106`/`dc68b0b`, runtime acceptance ครบ |
 | Welcome Entry | ✅ CLOSED (0 code changes) | สะพาน `/` → `/world` ถูกออกแบบ+ทดสอบไว้แล้ว (unit 25) — Final Walk ผ่าน: tap บ้าน → /world → Home Mode + Feed 8 events จริง |
+| Housekeeping | ✅ CLOSED | Evidence snapshot `86eabf3` → Final Decision → owner executed (Pre-flight→Execute→Read-back): DELETE inverted ×3 · FIX PET-0003 (`tricolor` — บ้านเต็มใบแรกของ color_pattern) · DELETE PET-0004 · PRESERVE litters ครบ 15 — `docs/HOUSEKEEPING_EVIDENCE.md` |
 | Journey Composer / Feed | ✅ LIVE บน `/world` | POST 201 ×5 · DB read-back ตรงทุกแถว · Birth Event regression PASS |
 | Docs Chain | ✅ CURRENT | DATA_SEMANTICS_AUDIT → TIME_MODEL → PET_APPEARANCE_MODEL → PATTERN_STORAGE_DESIGN → EVENT_STORAGE_DESIGN |
-| Production data | 4 pets (PET-0001–0004) · 8 journey events | บ้าน "บ้านของเรา" (6624b327) |
+| Production data | **3 pets · 5 journey events · 15 litters** (14 structural history + #015 ของจริง) | บ้าน "บ้านของเรา" (6624b327) — หลัง Housekeeping 2026-09-26 |
 
 ## Root Cause Archive — เคสที่ปิดด้วยหลักฐาน (ไม่ใช่การเดา)
 
@@ -59,8 +60,8 @@
 | รายการ | รายละเอียด | การตัดสินที่รอ |
 | --- | --- | --- |
 | like/comment ไม่มี storage | UI affordance มี แต่ไม่มีตาราง — ทำ no-op แล้ว (`a7e1ab3`) | ออกแบบตารางเมื่อเปิด slice |
-| Event rows ยุคทดสอบ (3 แถว inverted) | หลักฐานการค้นพบบั๊ก stale-init — ไม่ใช่ขยะ | ตัดสิน: preserve as evidence / mark / delete |
-| PET-0003 ขนมครก | `species: "แมว"` (convention DB = English) + `"สามสี"` อยู่ใน color text | housekeeping หลังมี color_pattern ใช้จริง — ย้าย pattern ออกจาก color |
+| Event rows ยุคทดสอบ (3 แถว inverted) | ~~หลักฐานการค้นพบบั๊ก stale-init~~ | **RESOLVED (2026-09-26)** — snapshot ครบใน `HOUSEKEEPING_EVIDENCE.md` → DELETE ตาม Final Decision |
+| PET-0003 ขนมครก | ~~species "แมว" + "สามสี" ใน color~~ | **RESOLVED (2026-09-26)** — FIX: `Cat / ส้ม ขาว / tricolor` (color_pattern ได้บ้านเต็มใบแรก) |
 | Orphan litters #010–#014 | litter insert สำเร็จแต่ pet insert ล้ม (ก่อน fix) | Transaction/atomicity slice — แยกจาก housekeeping |
 | Duplicate RLS policies | `pet_*`/`ev_*` คู่กับ "Home members …" เงื่อนไขเดียวกัน (prod dump ยืนยัน) | policy cleanup slice — ยังไม่มีหลักฐานว่าทำให้ flow พัง |
 | `visibility` column | prod มี / repo init ไม่มี (ทิศตรงข้ามกับ drift อื่น) | ตัดสิน semantic ตอน Event domain ขยาย |
@@ -77,9 +78,9 @@
 ```
 TRACKING            ✅ CLOSED (1a19a9b)
 Welcome Entry       ✅ CLOSED (0 code changes — bridge unit-tested + Final Walk ผ่าน)
-Housekeeping        ← NEXT — Slice แยก: ตารางตัดสินรายแถว (preserve evidence / mark / delete)
-RECONCILE           ← หลัง Housekeeping
-Merge → Main        ← หลัง Reconcile (production build เก่ายังไม่มี /world — 404 ยืนยันแล้ว)
+Housekeeping        ✅ CLOSED (86eabf3 evidence → Final Decision → executed + read-back ครบ)
+RECONCILE           ← NOW — วาง Code + DB + Docs + Drift บนโต๊ะเดียว
+Merge → Main        ← หลัง Reconcile ผ่าน (production build เก่ายังไม่มี /world — 404 ยืนยันแล้ว)
 ```
 
 ## Schema ปัจจุบัน (prod = repo หลัง reconciliation)
@@ -118,6 +119,7 @@ RECONCILE → ตรวจ Current State → ตรวจ Evidence ล่าส�
 ## Change Log
 
 ### 2026-09-26 — Home Mode Campaign (เซสชันนี้)
+- **Housekeeping CLOSED** — evidence snapshot `86eabf3` → Final Decision → owner executed (SQL Editor): DELETE inverted ×3 · FIX PET-0003 → `Cat/ส้ม ขาว/tricolor` · DELETE PET-0004 · PRESERVE litters 15 — read-back: pets=3, events=5
 - **Welcome Entry CLOSED (0 code changes)** — สะพาน `/` → `/world` พิสูจน์ครบ 3 ชั้น: unit 25 tests + ปลายทาง Home Mode (runtime acceptance รอบก่อน) + Final Walk จริง (tap → /world → Feed 8 events) · infra evidence: Vercel SSO/2FA ไม่ใช่ app bug · production ยัง 404 ที่ `/world` = หลักฐาน Merge → Main
 - **Event Payload + Business Validation** (`8a5433a`) — home-integrity gate ก่อน POST, pure module
 - **Pattern Input** (`435f53b`) — vocabulary-locked select, normalize/reject ตาม contract
