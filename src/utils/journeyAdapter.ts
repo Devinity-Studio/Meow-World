@@ -44,10 +44,13 @@ function splitContent(content: string | null): { title: string; description: str
 /** DB row → JourneyEvent UI (authorName จากผู้เรียกที่ join profiles แล้ว) */
 export function adaptJourneyEventRow(row: JourneyEventRow, authorName?: string): JourneyEvent {
   const { title, description } = splitContent(row.content);
+  // union read ตาม EVENT_STORAGE_DESIGN: ชุดสัตว์ของเรื่องราว = [pet_id ∪ pet_ids[]]
+  // — [] ต้องกลายเป็น undefined เพื่อให้ feed/filter fallback ไป pet_id ได้ตาม UI contract เดิม
+  const allPetIds = [...new Set([row.pet_id, ...(row.pet_ids ?? [])].filter((id): id is string => !!id))];
   return {
     id: row.id,
     pet_id: row.pet_id ?? undefined,
-    tagged_pet_ids: row.pet_ids ?? undefined,
+    tagged_pet_ids: allPetIds.length > 0 ? allPetIds : undefined,
     tagged_user_ids: row.participant_ids ?? undefined,
     author_id: row.author_id ?? undefined,
     author_name: authorName,
