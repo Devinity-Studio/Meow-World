@@ -19,6 +19,7 @@
 | Pattern Input | ✅ CLOSED | vocabulary 9 keys = CHECK บน prod — `435f53b`, tsc 0 · 50/50 |
 | Event Payload + Home-integrity | ✅ CLOSED | `buildJourneyEventPayload` gate ก่อน POST — `8a5433a`, 50/50 |
 | Home Mode | ✅ CLOSED | orphan UI → production-backed — wire `a7e1ab3` + fixes `eb1602d`/`1c32106`/`dc68b0b`, runtime acceptance ครบ |
+| Welcome Entry | ✅ CLOSED (0 code changes) | สะพาน `/` → `/world` ถูกออกแบบ+ทดสอบไว้แล้ว (unit 25) — Final Walk ผ่าน: tap บ้าน → /world → Home Mode + Feed 8 events จริง |
 | Journey Composer / Feed | ✅ LIVE บน `/world` | POST 201 ×5 · DB read-back ตรงทุกแถว · Birth Event regression PASS |
 | Docs Chain | ✅ CURRENT | DATA_SEMANTICS_AUDIT → TIME_MODEL → PET_APPEARANCE_MODEL → PATTERN_STORAGE_DESIGN → EVENT_STORAGE_DESIGN |
 | Production data | 4 pets (PET-0001–0004) · 8 journey events | บ้าน "บ้านของเรา" (6624b327) |
@@ -67,16 +68,18 @@
 | ช่องสถานที่ (location) | ถูกถอดออกจาก Composer — ไม่มีที่เก็บ | อนาคต fold เป็น prose หรือเพิ่ม column |
 | Vercel Git integration | ไม่ auto-deploy ตั้งแต่ย้าย org `BombINdyBoy` → `Devinity-Studio` — ต้อง deploy ผ่าน CLI | reconnect Git integration เมื่อ merge → main |
 | OAuth allowlist | ครอบเฉพาะ prod origin — preview/localhost ดีดกลับ prod (login บน preview ใช้ session transplant) | เพิ่ม wildcard `*-thdev8studio.vercel.app` ใน Supabase redirect URLs (config slice แยก) |
+| Welcome Entry Adjacent: `/scan` route missing | ปุ่ม "สแกน QR" บน Welcome ชี้ `/scan` ซึ่งไม่มี route (404) | **Known incomplete · Non-blocking** · Scope: QR Scan / future invitation flow — ไม่ตัดปุ่ม (การตัดคือ product behavior อีก slice) |
+| Welcome Entry Adjacent: HouseGraphicCard "สร้าง QR เชิญ" | no-op handler (`a7e1ab3`) — planned capability ยังไม่มี implementation | **No-op · Non-blocking** · Scope: future invitation flow |
 | Group D artifacts | `.freebuff/project-id`, `next-env.d.ts`, `tsconfig.tsbuildinfo` ค้าง uncommitted | ตามข้อตกลง — git/environment hygiene slice แยก |
 
 ## Backlog / ห้องถัดไป (ลำดับที่ owner วาง)
 
 ```
-TRACKING (ห้องนี้)  ✅
-Welcome Entry       ← NEXT — เชื่อมของที่พิสูจน์แล้วเข้าด้วยกัน:
-                        Welcome Entry → /world → Home Mode → Journey → DB
-Housekeeping        ← Slice แยก — ตัดสินรายแถว (evidence vs residue) ไม่ล้างรวง
-Merge → Main        ← หลังสองห้องนี้ปิด
+TRACKING            ✅ CLOSED (1a19a9b)
+Welcome Entry       ✅ CLOSED (0 code changes — bridge unit-tested + Final Walk ผ่าน)
+Housekeeping        ← NEXT — Slice แยก: ตารางตัดสินรายแถว (preserve evidence / mark / delete)
+RECONCILE           ← หลัง Housekeeping
+Merge → Main        ← หลัง Reconcile (production build เก่ายังไม่มี /world — 404 ยืนยันแล้ว)
 ```
 
 ## Schema ปัจจุบัน (prod = repo หลัง reconciliation)
@@ -115,6 +118,7 @@ RECONCILE → ตรวจ Current State → ตรวจ Evidence ล่าส�
 ## Change Log
 
 ### 2026-09-26 — Home Mode Campaign (เซสชันนี้)
+- **Welcome Entry CLOSED (0 code changes)** — สะพาน `/` → `/world` พิสูจน์ครบ 3 ชั้น: unit 25 tests + ปลายทาง Home Mode (runtime acceptance รอบก่อน) + Final Walk จริง (tap → /world → Feed 8 events) · infra evidence: Vercel SSO/2FA ไม่ใช่ app bug · production ยัง 404 ที่ `/world` = หลักฐาน Merge → Main
 - **Event Payload + Business Validation** (`8a5433a`) — home-integrity gate ก่อน POST, pure module
 - **Pattern Input** (`435f53b`) — vocabulary-locked select, normalize/reject ตาม contract
 - **Home Mode wire** (`a7e1ab3`) — `/world` เป็น host: fetch pets/members(profiles join)/events, adapter `journeyAdapter.ts` (pet_ids∪pet_id → UI, content→title/desc, created_at→event_date ชั่วคราว), Composer submit → `buildJourneyEventPayload`, like/comment no-op (ไม่มี fake interaction)
