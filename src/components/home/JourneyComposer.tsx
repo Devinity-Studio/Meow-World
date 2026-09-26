@@ -112,8 +112,10 @@ export const JourneyComposer: React.FC<JourneyComposerProps> = ({
     if (!title.trim()) return;
 
     onAddEvent({
-      pet_id: selectedPetIds[0] || (pets[0]?.id ?? undefined),
-      tagged_pet_ids: selectedPetIds.length > 0 ? selectedPetIds : pets.map((p) => p.id),
+      // ส่งตามที่ผู้ใช้เลือกจริง (รวม empty) — ไม่เดาแทน: Q4 "ไม่มี Pet ก็สร้างได้"
+      // ต้องผ่าน UI ได้ — integrity เป็นหน้าที่ของ payload layer ไม่ใช่ fallback ของ composer
+      pet_id: selectedPetIds[0] || undefined,
+      tagged_pet_ids: selectedPetIds,
       tagged_user_ids: selectedMemberIds,
       event_date: eventDate,
       event_type: eventType,
