@@ -1,8 +1,10 @@
 # Meow World V4.1 Heart Edition Tracking
 
-**Updated:** 2026-09-26
-**Active Branch:** `feature/home-creation-phase-0-999` (HEAD `dc68b0b` = origin)
-**Deploy Model:** Vercel CLI preview ต่อ commit (`*-thdev8studio.vercel.app`) · Production ยังไม่รับโค้ดใหม่ — รอ Merge → Main
+**Updated:** 2026-09-26 — **🏠 MERGED TO MAIN — PRODUCTION LIVE**
+**Active Branch:** `main` (merge commit `08aa733` = origin/main — feature branch คงอยู่เป็นหลักฐาน)
+**Production:** `meow-world-heart-edition.vercel.app` (deployment `qutxn9ik5`, build จาก main) — **/world LIVE ไม่ใช่ 404 แล้ว**
+**Verified on production:** / → Welcome → tap บ้าน → /world → Home Mode → 3 แมว + 5 events + Composer · Google OAuth บน prod origin ผ่านครั้งแรก (ไม่ต้อง transplant session)
+**Merge note:** main-side `4c7209e` (README) รวมสำเร็จ — zero conflict (ort) · Group D artifacts ถูก stash ไว้ (`group-d-artifacts-preserved-before-merge`) ก่อน checkout
 **Scope:** Roadmap 1 — Passport + Life Journey + Home + Shared Home + Family
 
 ---
@@ -79,8 +81,9 @@
 TRACKING            ✅ CLOSED (1a19a9b)
 Welcome Entry       ✅ CLOSED (0 code changes — bridge unit-tested + Final Walk ผ่าน)
 Housekeeping        ✅ CLOSED (86eabf3 evidence → Final Decision → executed + read-back ครบ)
-RECONCILE           ← NOW — วาง Code + DB + Docs + Drift บนโต๊ะเดียว
-Merge → Main        ← หลัง Reconcile ผ่าน (production build เก่ายังไม่มี /world — 404 ยืนยันแล้ว)
+RECONCILE           ✅ PASSED (Code ✅ DB ✅ Docs ✅ Drift เจ้าของสถานะครบ)
+Merge → Main        ✅ DONE (08aa733 — production build Ready + production walk ผ่านครบ)
+ห้องถัดไป           POST-LAUNCH: บันทึก playbook จากประสบการณ์จริง + คิว drift/debt ตาม inventory
 ```
 
 ## Schema ปัจจุบัน (prod = repo หลัง reconciliation)
@@ -119,6 +122,7 @@ RECONCILE → ตรวจ Current State → ตรวจ Evidence ล่าส�
 ## Change Log
 
 ### 2026-09-26 — Home Mode Campaign (เซสชันนี้)
+- **🏠 MERGE → MAIN — PRODUCTION LIVE** — merge `08aa733` (no-ff, zero conflict กับ `4c7209e` README) · production deploy `qutxn9ik5` Ready · production walk ผ่านครบ: `/` → tap → `/world` → Home Mode → 3 แมว + 5 events · OAuth prod origin ผ่านครั้งแรก
 - **Housekeeping CLOSED** — evidence snapshot `86eabf3` → Final Decision → owner executed (SQL Editor): DELETE inverted ×3 · FIX PET-0003 → `Cat/ส้ม ขาว/tricolor` · DELETE PET-0004 · PRESERVE litters 15 — read-back: pets=3, events=5
 - **Welcome Entry CLOSED (0 code changes)** — สะพาน `/` → `/world` พิสูจน์ครบ 3 ชั้น: unit 25 tests + ปลายทาง Home Mode (runtime acceptance รอบก่อน) + Final Walk จริง (tap → /world → Feed 8 events) · infra evidence: Vercel SSO/2FA ไม่ใช่ app bug · production ยัง 404 ที่ `/world` = หลักฐาน Merge → Main
 - **Event Payload + Business Validation** (`8a5433a`) — home-integrity gate ก่อน POST, pure module
