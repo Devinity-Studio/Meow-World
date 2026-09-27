@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { logInsertEvidence } from '@/utils/petInsertEvidence';
 import { LitterFormData, BabyData, Pet } from '@/types/pet';
-import { SPECIES_CONFIG, SpeciesType } from '@/types/species';
+import { babyIdentityFields } from '@/utils/petIdentity';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 
@@ -196,10 +196,11 @@ export default function BirthPage() {
           name: baby.name || `Baby #${createdPets.length + 1}`,
           nickname: baby.nickname || null,
           species: sharedData.location === 'Farm' ? 'Cat' : 'Cat', // default, user picks
-          breed: baby.breed || null,
+          // §7 — pass-through เท่านั้น: ไม่มีการ derive จากพ่อ/แม่ (babyIdentityFields
+          // ไม่รับพารามิเตอร์ parent — type system บังคับ)
+          ...babyIdentityFields(baby),
           gender: baby.gender || null,
           birth_date: baby.birth_date_override || sharedData.birth_date || null,
-          color: baby.color || null,
           litter_id: litter.id,
           mother_id: mother.id,
           father_id: father.id,
@@ -273,17 +274,10 @@ export default function BirthPage() {
     }
   }
 
-  // Auto-select species default breed from parent
-  useEffect(() => {
-    if (sharedData.mother_id) {
-      const mother = existingPets.find((p) => p.id === sharedData.mother_id);
-      if (mother?.breed) {
-        setBabies((prev) =>
-          prev.map((b) => (b.breed ? b : { ...b, breed: mother.breed! }))
-        );
-      }
-    }
-  }, [sharedData.mother_id, existingPets]);
+  // §7 Parent/Lineage — พ่อแม่บอกที่มา แต่ตัวลูกบอกตัวตนของมันเอง:
+  // ไม่มีการ auto-copy breed จาก parent ไปยังลูกอีกต่อไป (เดิม useEffect ที่
+  // คัดลอก mother.breed → baby.breed ถูกถอนออก — Parent Relationship ≠
+  // Child Classification) — แสดง breed ของแม่เป็น "ข้อมูลอ้างอิง" ให้ผู้ใช้อ่านเอง
 
   if (error && !step) {
     return (
@@ -536,7 +530,7 @@ export default function BirthPage() {
                       value={baby.breed || ''}
                       onChange={(e) => updateBaby(index, 'breed', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      placeholder={sharedData.mother_id ? `สืบทอดจากแม่...` : "เช่น British Shorthair..."}
+                      placeholder="เช่น British Shorthair... (ระบุเอง — ไม่ดึงจากแม่อัตโนมัติ)"
                     />
                   </div>
 

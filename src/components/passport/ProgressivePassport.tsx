@@ -5,6 +5,14 @@ import { createClient } from '@/utils/supabase/client';
 import { Pet } from '@/types/pet';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
+import {
+  readPetIdentity,
+  breedLabels,
+  breedStatusLabel,
+  colorLabels,
+  patternLabel,
+  colorCountLabel,
+} from '@/utils/petIdentity';
 
 interface ParentInfo {
   id: string;
@@ -43,7 +51,8 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
   const [loading, setLoading] = useState(true);
 
   const fetchPet = useCallback(async () => {
-    setLoading(true);
+    // loading starts as true — a synchronous setLoading here would trigger
+    // cascading renders inside the effect (react-hooks/set-state-in-effect).
     try {
       const { data: petData, error } = await supabase
         .from('pets')
@@ -86,6 +95,8 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
   }, [petId, supabase]);
 
   useEffect(() => {
+    // Fetch effect must set state (setPet/setLoading) — same convention as pets/page.tsx
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchPet();
   }, [fetchPet]);
 
@@ -99,6 +110,17 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
       </div>
     );
   }
+
+  // §16 — identity ใหม่เมื่อมี · legacy free text แสดงต่อเมื่อยังไม่มี structured data
+  const identity = readPetIdentity(pet);
+  const breedValue =
+    identity.breed_ids.length > 0
+      ? `${breedLabels(identity.breed_ids).join(' + ')}${breedStatusLabel(identity.breed_status) ? ` (${breedStatusLabel(identity.breed_status)})` : ''}`
+      : identity.legacyBreed;
+  const colorValue =
+    identity.colors.length > 0
+      ? `${colorLabels(identity.colors).join(' ')}${colorCountLabel(identity.colors) ? ` (${colorCountLabel(identity.colors)})` : ''}${patternLabel(identity.color_pattern) ? ` · ${patternLabel(identity.color_pattern)}` : ''}`
+      : identity.legacyColor;
 
   // Build passport fields
   const fields: PassportField[] = [
@@ -139,8 +161,8 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
       key: 'breed',
       label: 'สายพันธุ์',
       icon: '🧬',
-      value: pet.breed || null,
-      hasData: !!pet.breed,
+      value: breedValue,
+      hasData: !!breedValue,
       category: 'identity',
     },
     {
@@ -163,8 +185,8 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
       key: 'color',
       label: 'สี',
       icon: '🎨',
-      value: pet.color || null,
-      hasData: !!pet.color,
+      value: colorValue,
+      hasData: !!colorValue,
       category: 'identity',
     },
 

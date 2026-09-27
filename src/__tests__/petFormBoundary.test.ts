@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { toPetInsertPayload } from '@/components/pets/PetForm';
-import { joinColors, splitColors, colorCountLabel, COLOR_OPTIONS, PATTERN_OPTIONS, normalizePatternValue } from '@/components/pets/petFormOptions';
+import {
+  SPECIES_OPTIONS,
+  PATTERN_OPTIONS,
+  COLOR_VOCABULARY,
+  normalizePatternValue,
+  colorCountLabel,
+} from '@/components/pets/petFormOptions';
+import { legacyColorTokens } from '@/utils/petIdentity';
 import { PetFormData } from '@/types/pet';
 
 /**
@@ -8,6 +15,10 @@ import { PetFormData } from '@/types/pet';
  * strings in optional text fields become junk data. Normalization must follow
  * per-field semantics (matching Birth Wizard reference behavior), not a blind
  * replace.
+ *
+ * Pet Identity fields (breed_status/breed_ids/dominant_breed_id/colors) follow
+ * the same boundary discipline with vocabulary mirroring the DB CHECKs —
+ * deeper coverage lives in petIdentity.test.ts.
  */
 function baseForm(overrides: Partial<PetFormData> = {}): PetFormData {
   return {
@@ -30,9 +41,13 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
       species: 'Cat',
       nickname: null,
       breed: null,
+      breed_status: null,
+      breed_ids: null,
+      dominant_breed_id: null,
       gender: null,
       birth_date: null,
       color: null,
+      colors: null,
       color_pattern: null,
     });
   });
@@ -44,7 +59,7 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
     expect(payload.birth_date).not.toBe('');
   });
 
-  it('keeps provided values as trimmed strings', () => {
+  it('keeps provided legacy values as trimmed strings', () => {
     const payload = toPetInsertPayload(
       baseForm({
         nickname: '  โมจิ  ',
@@ -60,9 +75,13 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
       species: 'Cat',
       nickname: 'โมจิ',
       breed: 'วิเชียรมาศ',
+      breed_status: null,
+      breed_ids: null,
+      dominant_breed_id: null,
       gender: 'Male',
       birth_date: '2026-09-26',
       color: 'เทา',
+      colors: null,
       color_pattern: 'tricolor',
     });
   });
@@ -80,49 +99,41 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
   });
 });
 
-describe('color checklist ↔ storage convention', () => {
-  it('joins multiple colors with spaces, matching real data (ส้ม ขาว)', () => {
-    expect(joinColors(['ส้ม', 'ขาว'])).toBe('ส้ม ขาว');
-  });
-
-  it('round-trips stored color back to checklist selections', () => {
-    expect(splitColors('ส้ม ขาว')).toEqual(['ส้ม', 'ขาว']);
-    expect(splitColors('เทา')).toEqual(['เทา']);
-  });
-
-  it('handles empty/null stored colors', () => {
-    expect(splitColors(null)).toEqual([]);
-    expect(splitColors('')).toEqual([]);
-    expect(joinColors([])).toBe('');
-  });
-
-  it('toggle-off removes only the deselected color', () => {
-    const current = splitColors('ส้ม ขาว');
-    const next = current.filter((x) => x !== 'ขาว');
-    expect(joinColors(next)).toBe('ส้ม');
-  });
-});
-
 describe('color semantics — pattern words are not colors', () => {
   it('never offers pattern words as color choices', () => {
-    const values = COLOR_OPTIONS.map((c) => c.value);
+    const keys = COLOR_VOCABULARY.map((c) => c.key);
+    const thLabels = COLOR_VOCABULARY.map((c) => c.label.th);
     // สามสี/สองสี are derived facts; ลาย* are patterns — none may be a color option
-    expect(values).not.toContain('สามสี');
-    expect(values).not.toContain('สองสี');
-    expect(values.every((v) => !v.startsWith('ลาย'))).toBe(true);
+    expect(keys).not.toContain('สามสี');
+    expect(keys).not.toContain('สองสี');
+    expect(keys.every((k) => !k.startsWith('ลาย'))).toBe(true);
+    expect(thLabels).not.toContain('สามสี');
+    expect(thLabels.every((l) => !l.startsWith('ลาย'))).toBe(true);
   });
 
   it('derives the count label from the selection, never stores it as a color', () => {
     expect(colorCountLabel([])).toBe('');
-    expect(colorCountLabel(['ส้ม'])).toBe('สีเดียว');
-    expect(colorCountLabel(['ส้ม', 'ขาว'])).toBe('2 สี');
-    expect(colorCountLabel(['ส้ม', 'ขาว', 'ดำ'])).toBe('3 สี');
+    expect(colorCountLabel(['orange'])).toBe('สีเดียว');
+    expect(colorCountLabel(['orange', 'white'])).toBe('2 สี');
+    expect(colorCountLabel(['orange', 'white', 'black'])).toBe('3 สี');
+  });
+});
+
+describe('legacy color storage convention (space-joined free text)', () => {
+  it('reads the existing convention "ส้ม ขาว" back into tokens', () => {
+    expect(legacyColorTokens('ส้ม ขาว')).toEqual(['orange', 'white']);
+    expect(legacyColorTokens('เทา')).toEqual(['gray']);
+  });
+
+  it('handles empty/null stored colors', () => {
+    expect(legacyColorTokens(null)).toEqual([]);
+    expect(legacyColorTokens('')).toEqual([]);
   });
 });
 
 describe('Pattern Input — vocabulary-locked semantic (separate from Colors)', () => {
   it('offers exactly the CHECK-locked vocabulary, nothing invented', () => {
-    expect(PATTERN_OPTIONS.map((p) => p.value)).toEqual([
+    expect(PATTERN_OPTIONS.map((p) => p.key)).toEqual([
       'solid', 'bicolor', 'tricolor', 'tabby', 'calico', 'tortoiseshell', 'tuxedo', 'pointed', 'other',
     ]);
   });
@@ -154,6 +165,13 @@ describe('Pattern Input — vocabulary-locked semantic (separate from Colors)', 
     expect(payload).not.toHaveProperty('color_pattern', 'solid'); // never invented
     expect(payload.color_pattern).toBeNull();
     expect(payload.color).toBeNull(); // colors boundary unchanged
-    expect(splitColors('ส้ม ขาว')).toEqual(['ส้ม', 'ขาว']); // existing data reads the same
+    expect(legacyColorTokens('ส้ม ขาว')).toEqual(['orange', 'white']); // existing data reads the same
+  });
+});
+
+describe('Species options — unchanged by this slice', () => {
+  it('only Cat is enabled today', () => {
+    expect(SPECIES_OPTIONS.find((s) => s.id === 'cat')?.enabled).toBe(true);
+    expect(SPECIES_OPTIONS.filter((s) => s.id !== 'cat').every((s) => !s.enabled)).toBe(true);
   });
 });

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Stale git worktrees must not be linted as part of the main tree.
+    ".kilo/worktrees/**",
   ]),
 ]);
 

@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, defaultExclude } from "vitest/config";
 import path from "path";
 
 export default defineConfig({
@@ -11,5 +11,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/__tests__/setup.ts"],
     css: true,
+    // Stale git worktrees contain old copies of tests — never run them.
+    exclude: [...defaultExclude, "**/.kilo/worktrees/**"],
   },
 });

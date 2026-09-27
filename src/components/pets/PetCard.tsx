@@ -3,6 +3,14 @@
 import { Pet } from '@/types/pet';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
+import {
+  readPetIdentity,
+  breedLabels,
+  breedStatusLabel,
+  colorLabels,
+  patternLabel,
+  colorCountLabel,
+} from '@/utils/petIdentity';
 
 interface PetCardProps {
   pet: Pet;
@@ -13,6 +21,17 @@ interface PetCardProps {
 
 export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
   const age = pet.birth_date ? calculateAge(pet.birth_date) : null;
+
+  // §16 — ข้อมูลเดิมอ่านได้ครบ: identity ใหม่เมื่อมี · legacy free text แสดงต่อเมื่อยังไม่มี
+  const identity = readPetIdentity(pet);
+  const breedText =
+    identity.breed_ids.length > 0
+      ? breedLabels(identity.breed_ids).join(' + ')
+      : identity.legacyBreed;
+  const statusText = breedStatusLabel(identity.breed_status);
+  const colorText =
+    identity.colors.length > 0 ? colorLabels(identity.colors).join(' ') : pet.color;
+  const patternText = patternLabel(identity.color_pattern);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -49,7 +68,8 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
       <div className="space-y-2 text-gray-600">
         <p>
           <span className="font-medium">สายพันธุ์:</span> {pet.species}
-          {pet.breed && ` - ${pet.breed}`}
+          {breedText && ` - ${breedText}`}
+          {statusText && ` (${statusText})`}
         </p>
         {pet.nickname && (
           <p>
@@ -68,9 +88,11 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
             {age && ` (${age})`}
           </p>
         )}
-        {pet.color && (
+        {colorText && (
           <p>
-            <span className="font-medium">สี:</span> {pet.color}
+            <span className="font-medium">สี:</span> {colorText}
+            {identity.colors.length > 1 && colorCountLabel(identity.colors) && ` (${colorCountLabel(identity.colors)})`}
+            {patternText && ` · ${patternText}`}
           </p>
         )}
         <p className="text-sm text-gray-400">

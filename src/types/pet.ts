@@ -4,10 +4,20 @@ export interface Pet {
   name: string;
   nickname?: string | null;
   species: string;
+  /** Legacy free text — คงอยู่เพื่ออ่านข้อมูลเดิม (Pet Identity: แสดงผ่าน legacy adapter) */
   breed?: string | null;
+  /** Breed Status key: purebred | mixed | unknown — NULL = ยังไม่ระบุ (CHECK pets_breed_status_allowed) */
+  breed_status?: string | null;
+  /** Known Breeds — stable keys TEXT[] (CHECK pets_breed_ids_allowed + pets_breed_status_shape) */
+  breed_ids?: string[] | null;
+  /** Owner Observation — ลักษณะที่ดูเด่น/คล้าย อ้างได้ทั้ง vocab ไม่จำกัดเฉพาะ breed_ids */
+  dominant_breed_id?: string | null;
   gender?: string | null;
   birth_date?: string | null;
+  /** Legacy space-joined free text ("ส้ม ขาว") — คงอยู่เพื่ออ่านข้อมูลเดิม */
   color?: string | null;
+  /** สีจริงหลายสี — stable keys TEXT[] (CHECK pets_colors_allowed) · color_count = derived */
+  colors?: string[] | null;
   /** Color Pattern key (solid/bicolor/tricolor/…) — CHECK-locked vocabulary, migration 20260926100000 */
   color_pattern?: string | null;
   avatar_url?: string | null;
@@ -31,15 +41,23 @@ export interface Pet {
  * Payload shape sent to the `pets` table after form normalization.
  * Optional fields are null (not '') when not provided — Postgres date columns
  * reject empty strings (22007) and empty strings in text fields become junk data.
+ *
+ * Pet Identity contract: stable keys เท่านั้น (ไม่มี display label หลุดเข้า payload)
+ * — breed_status/breed_ids/dominant_breed_id/colors normalize ที่ boundary โดย
+ * petIdentity.ts และ shape ต้องผ่าน CHECK เดียวกับ migration 20260927100000
  */
 export interface PetInsertPayload {
   name: string;
   species: string;
   nickname?: string | null;
   breed?: string | null;
+  breed_status?: string | null;
+  breed_ids?: string[] | null;
+  dominant_breed_id?: string | null;
   gender?: string | null;
   birth_date?: string | null;
   color?: string | null;
+  colors?: string[] | null;
   /** CHECK-locked vocabulary — null when not provided */
   color_pattern?: string | null;
 }
@@ -49,9 +67,17 @@ export interface PetFormData {
   species: string;
   nickname?: string;
   breed?: string;
+  /** raw status key ('' when untouched) — normalized at the boundary */
+  breed_status?: string;
+  /** raw breed keys — normalized at the boundary */
+  breed_ids?: string[];
+  /** raw breed key ('' when untouched) — normalized at the boundary */
+  dominant_breed_id?: string;
   gender?: string;
   birth_date?: string;
   color?: string;
+  /** raw color keys — normalized at the boundary */
+  colors?: string[];
   /** raw pattern key (or '' when untouched) — normalized at the boundary */
   color_pattern?: string;
   weight?: number;

@@ -6,6 +6,14 @@ import { Pet, LifeJourneyEvent, LifeJourneyEventFormData } from '@/types/pet';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { createClient } from '@/utils/supabase/client';
+import {
+  readPetIdentity,
+  breedLabels,
+  breedStatusLabel,
+  colorLabels,
+  patternLabel,
+  colorCountLabel,
+} from '@/utils/petIdentity';
 import { ShareButton } from '@/components/qr/ShareButton';
 import { TokenList } from '@/components/qr/TokenList';
 import { ProgressivePassport } from '@/components/passport/ProgressivePassport';
@@ -151,6 +159,17 @@ export default function PetDetailPage() {
 
   const age = pet.birth_date ? calculateAge(pet.birth_date) : null;
 
+  // §16 — identity ใหม่เมื่อมี · legacy free text แสดงต่อเมื่อยังไม่มี structured data
+  const identity = readPetIdentity(pet);
+  const breedText =
+    identity.breed_ids.length > 0
+      ? breedLabels(identity.breed_ids).join(' + ')
+      : identity.legacyBreed;
+  const statusText = breedStatusLabel(identity.breed_status);
+  const colorText =
+    identity.colors.length > 0 ? colorLabels(identity.colors).join(' ') : pet.color;
+  const patternText = patternLabel(identity.color_pattern);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -166,7 +185,8 @@ export default function PetDetailPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{pet.name}</h1>
               <p className="text-gray-600 mt-1">
-                {pet.species}{pet.breed && ` - ${pet.breed}`}
+                {pet.species}{breedText && ` - ${breedText}`}
+                {statusText && ` • ${statusText}`}
                 {age && ` • ${age}`}
               </p>
             </div>
@@ -214,10 +234,14 @@ export default function PetDetailPage() {
                 </p>
               </div>
             )}
-            {pet.color && (
+            {colorText && (
               <div>
                 <p className="text-sm text-gray-500">สี</p>
-                <p className="font-medium">{pet.color}</p>
+                <p className="font-medium">
+                  {colorText}
+                  {identity.colors.length > 1 && colorCountLabel(identity.colors) && ` (${colorCountLabel(identity.colors)})`}
+                  {patternText && ` · ${patternText}`}
+                </p>
               </div>
             )}
             <div>

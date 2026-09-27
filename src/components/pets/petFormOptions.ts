@@ -1,18 +1,50 @@
 /**
- * Controlled input options for the Direct Add / Edit pet form.
+ * Controlled input options for the Direct Add / Edit pet form — SPECIES ONLY.
+ *
+ * Pet Identity vocabulary (Breed / Color / Pattern) ย้ายไปอยู่ที่ domain module
+ * เดียว: `src/utils/petIdentity.ts` (Task §1 "Breed vocabulary ต้องแยกจาก UI")
+ * — ไฟล์นี้ re-export ให้ import paths เดิมยังใช้ได้ และมี drift-guard test
+ * (petIdentity.test.ts) ตรวจว่า literal ใน migration 20260927100000 ≡ module นี้
  *
  * Sources of truth (no guessed hard-coded lists):
  *   - Species: SPECIES_CONFIG in src/types/species.ts (existing project config).
  *     Only 'cat' is enabled today — other species are visible but locked, which
  *     communicates "Meow World is not cats-only forever, but Cat ships first".
- *   - Breed:   convention from real data + mockData format: "ชื่อไทย (English)".
- *     Includes an "อื่น ๆ" escape hatch that reveals a text input, so nobody is
- *     blocked by an incomplete list.
- *   - Color:   cats commonly have multiple colors → checklist (multi-select),
- *     stored as the existing space-joined convention ("ส้ม ขาว" — มู่ทู่'s data).
  */
 
 import { SPECIES_CONFIG, SpeciesType } from '@/types/species';
+
+export {
+  // Pattern (existing contract — mirror ของ CHECK pets_color_pattern_allowed)
+  PATTERN_VOCABULARY as PATTERN_OPTIONS,
+  normalizePatternKey as normalizePatternValue,
+  availablePatterns,
+  colorCountLabel,
+  colorCount,
+  // Breed identity
+  BREED_VOCABULARY,
+  BREED_KEYS,
+  BREED_STATUS_KEYS,
+  BREED_STATUS_OPTIONS,
+  breedRequirement,
+  transitionBreedStatus,
+  // Color identity
+  COLOR_VOCABULARY,
+  COLOR_KEYS,
+  // Boundary normalizers
+  normalizeBreedStatus,
+  normalizeBreedIdList,
+  normalizeBreedKey,
+  normalizeColorList,
+  // Display
+  breedLabels,
+  breedStatusLabel,
+  colorLabels,
+  patternLabel,
+  // Legacy adapter
+  legacyColorTokens,
+  readPetIdentity,
+} from '@/utils/petIdentity';
 
 export interface SpeciesOption {
   id: SpeciesType;
@@ -35,106 +67,3 @@ export const SPECIES_OPTIONS: SpeciesOption[] = SPECIES_ORDER.map((id) => ({
   // the rest for the future — the UI shows them locked instead of hiding them).
   enabled: id === 'cat',
 }));
-
-export interface BreedOption {
-  value: string; // stored value, "ชื่อไทย (English)" convention
-  note?: string;
-}
-
-export const BREED_OPTIONS: BreedOption[] = [
-  { value: 'วิเชียรมาศ (Wichianmat)' },
-  { value: 'ขาวมณี (Khao Manee)' },
-  { value: 'บริติช ช็อตแฮร์ (British Shorthair)' },
-  { value: 'สก็อตติช โฟลด์ (Scottish Fold)' },
-  { value: 'ส้มลายเสือ (Orange Tabby)' },
-  { value: 'สีสวาด (Black-and-white Bicolor)' },
-  { value: 'ขนสั้นสีทอง (Golden Shorthair)' },
-  { value: 'อื่น ๆ', note: 'TEXT_INPUT' },
-];
-
-export interface ColorOption {
-  value: string;
-}
-
-/**
- * Data semantics: only TRUE colors live here. Pattern words (สามสี, สองสี,
- * ลายเสือ/tabby, ลายสลิด) are Color *Patterns* — a different attribute level —
- * and must not be selectable as colors, otherwise "ส้ม + ขาว + สามสี"
- * contradicts itself. The color COUNT is derived data (see colorCountLabel),
- * never a user choice. A pattern input waits for its own storage (e.g. a
- * color_pattern column) — we never ship an input the system cannot persist.
- */
-export const COLOR_OPTIONS: ColorOption[] = [
-  { value: 'ส้ม' },
-  { value: 'ขาว' },
-  { value: 'ดำ' },
-  { value: 'เทา' },
-  { value: 'น้ำตาล' },
-  { value: 'ครีม' },
-  { value: 'ฟ้า' },
-];
-
-/** Join selected colors using the existing storage convention ("ส้ม ขาว"). */
-export function joinColors(selected: string[]): string {
-  return selected.join(' ');
-}
-
-/** Split a stored color string back into checklist selections. */
-export function splitColors(stored: string | null | undefined): string[] {
-  if (!stored) return [];
-  return stored.split(/\s+/).filter(Boolean);
-}
-
-/**
- * Derived display label from the selected colors — NOT a stored field and NOT
- * a user choice: 0 → '' · 1 → 'สีเดียว' · N → 'N สี'. Two-color/three-color
- * facts belong to the system, not the form.
- */
-export function colorCountLabel(colors: string[]): string {
-  if (colors.length === 0) return '';
-  if (colors.length === 1) return 'สีเดียว';
-  return `${colors.length} สี`;
-}
-
-/**
- * Color Pattern — separate semantic from Colors (PET_APPEARANCE_MODEL).
- * Vocabulary is locked by the DB CHECK constraint `pets_color_pattern_allowed`
- * (migration 20260926100000) — these are the ONLY values the system can store,
- * so the input offers exactly this list. Stored as English key, displayed Thai.
- */
-export interface PatternOption {
-  value: string;
-  label: string;
-}
-
-export const PATTERN_OPTIONS: PatternOption[] = [
-  { value: 'solid', label: 'สีเดียว' },
-  { value: 'bicolor', label: 'สองสี' },
-  { value: 'tricolor', label: 'สามสี' },
-  { value: 'tabby', label: 'ลายสลิด / ลายเสือ' },
-  { value: 'calico', label: 'สามสีลายจุด (calico)' },
-  { value: 'tortoiseshell', label: 'ส้มดำปน (tortie)' },
-  { value: 'tuxedo', label: 'สูททักซิโด้' },
-  { value: 'pointed', label: 'ปลายสีเข้ม (วิเชียรมาศ)' },
-  { value: 'other', label: 'อื่น ๆ' },
-];
-
-/**
- * Normalize + validate a pattern input against the storage vocabulary.
- * '' / whitespace / undefined → null (optional field) — mirrors the Direct Add
- * boundary. A value outside the vocabulary is rejected (DB CHECK would reject
- * it too — fail early with a readable reason).
- */
-export type PatternValueResult =
-  | { invalid: false; value: string | null }
-  | { invalid: true; reason: string };
-
-export function normalizePatternValue(raw: string | null | undefined): PatternValueResult {
-  const trimmed = raw?.trim() || null;
-  if (trimmed === null) return { invalid: false, value: null };
-  if (PATTERN_OPTIONS.some((p) => p.value === trimmed)) return { invalid: false, value: trimmed };
-  return {
-    invalid: true,
-    reason: `ลักษณะสีไม่อยู่ในรายการที่ระบบรองรับ (id: ${trimmed})`,
-  };
-}
