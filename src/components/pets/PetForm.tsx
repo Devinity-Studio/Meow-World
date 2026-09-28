@@ -6,11 +6,7 @@ import { buildBirthPayload, readBirthInfo } from '@/utils/birthInfo';
 import { SPECIES_OPTIONS } from './petFormOptions';
 import {
   BREED_VOCABULARY,
-  BREED_STATUS_OPTIONS,
   COLOR_VOCABULARY,
-  PATTERN_VOCABULARY,
-  availablePatterns,
-  transitionBreedStatus,
   colorCountLabel,
   normalizeBreedStatus,
   normalizeBreedIdList,
@@ -48,9 +44,15 @@ export function toPetInsertPayload(form: PetFormData): PetInsertPayload {
   const pattern = normalizePatternKey(form.color_pattern);
   if (pattern.invalid) throw new Error(pattern.reason);
 
-  const status = normalizeBreedStatus(form.breed_status);
+  // Pet Identity (2026-09-29) — แหล่งข้อมูลสายพันธุ์เดียว: breed_ids (0..N) + ตัวเลือก
+  // "ยังไม่สามารถระบุได้" (unknown) ในชุดเดียวกัน — 2 ความหมายต้องแยกกัน:
+  //   ไม่เลือกอะไรเลย          = ผู้ใช้ยังไม่ได้บันทึกข้อมูล      → breed_status NULL
+  //   เลือกสายพันธุ์ N รายการ   = ข้อมูลจริงที่สังเกตได้          → breed_status NULL + breed_ids
+  //   ยังไม่สามารถระบุได้ (unknown) = ผู้ใช้รู้ว่าระบุไม่ได้      → breed_status 'unknown' (DB: count=0)
+  // ระบบไม่ตัดสิน purebred/mixed อีกต่อไป (ค่าเดิมใน DB ยังอ่านได้ผ่าน readPetIdentity)
+  const unknownSelected = normalizeBreedStatus(form.breed_status) === 'unknown';
 
-  const breeds = normalizeBreedIdList(form.breed_ids, status);
+  const breeds = normalizeBreedIdList(form.breed_ids, null);
   if (breeds.invalid) throw new Error(breeds.reason);
 
   const dominant = normalizeBreedKey(form.dominant_breed_id);
@@ -74,8 +76,8 @@ export function toPetInsertPayload(form: PetFormData): PetInsertPayload {
     species: form.species,
     nickname: form.nickname?.trim() || null,
     breed: form.breed?.trim() || null,
-    breed_status: status,
-    breed_ids: breeds.value,
+    breed_status: unknownSelected ? 'unknown' : null,
+    breed_ids: unknownSelected ? null : breeds.value,
     dominant_breed_id: dominant.value,
     gender: form.gender || null,
     birth_date: birth.payload.birth_date,
@@ -96,7 +98,9 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
     nickname: pet?.nickname || '',
     // Legacy free text — preserved and re-saved untouched (existing data stays readable)
     breed: pet?.breed || '',
-    breed_status: pet?.breed_status || '',
+    // สถานะสายพันธุ์ (purebred/mixed) ถูกถอดออกจาก UI ทั้งหมด — เก็บเฉพาะ 'unknown'
+    // ("ยังไม่สามารถระบุได้" คงความหมายเดิมของผู้ใช้ตอน edit)
+    breed_status: pet?.breed_status === 'unknown' ? 'unknown' : '',
     breed_ids: pet?.breed_ids || [],
     dominant_breed_id: pet?.dominant_breed_id || '',
     gender: pet?.gender || '',
@@ -115,23 +119,12 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
     color_pattern: pet?.color_pattern || '',
   });
 
-  const status = normalizeBreedStatus(formData.breed_status);
+  const unknownSelected = formData.breed_status === 'unknown';
 
-  // §9 — ห้าม silently delete: รายการเดิมคงอยู่ใน state เสมอ แต่ถ้าสถานะปัจจุบัน
-  // ไม่อนุญาต ต้องบอกผู้ใช้ว่า "จะไม่ถูกบันทึกขณะสถานะนี้" (แจ้งชัด ไม่ลบเงียบ)
+  // §9 — ห้าม silently delete: รายการเดิมคงอยู่ใน state เสมอ แต่ขณะเลือก "ยังไม่สามารถระบุได้"
+  // ต้องบอกผู้ใช้ว่ารายการจะไม่ถูกบันทึก (แจ้งชัด ไม่ลบเงียบ)
   const preservedBreedCount = formData.breed_ids?.length ?? 0;
-  const showBreedPreservationNotice =
-    preservedBreedCount > 0 &&
-    (status === null ||
-      status === 'unknown' ||
-      (status === 'purebred' && preservedBreedCount !== 1));
-
-  // §5 — conservative compatibility: filter เฉพาะจำนวนสีที่ขัดแน่นอน
-  const patterns = availablePatterns(formData.colors);
-  const currentPatternBlocked =
-    patterns !== null &&
-    !!formData.color_pattern &&
-    !patterns.some((p) => p.key === formData.color_pattern);
+  const showBreedPreservationNotice = unknownSelected && preservedBreedCount > 0;
 
   function toggleBreed(key: string) {
     setFormData((prev) => {
@@ -139,7 +132,8 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
       const next = current.includes(key)
         ? current.filter((b) => b !== key)
         : [...current, key];
-      return { ...prev, breed_ids: next };
+      // เลือกสายพันธุ์ = ยกเลิก "ยังไม่สามารถระบุได้" อัตโนมัติ (สองสิ่งนี้ mutually exclusive)
+      return { ...prev, breed_ids: next, breed_status: next.length > 0 ? '' : prev.breed_status };
     });
   }
 
@@ -217,150 +211,61 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
         </div>
       </div>
 
-      {/* ── Breed Status (§1, §9) — input มาจากความหมาย: สถานะก่อน แล้ว selector ตาม ── */}
+      {/* ── สายพันธุ์ — แหล่งข้อมูลเดียว (multi-select 0..N) + "ยังไม่สามารถระบุได้"
+          ในชุดเดียวกัน · ไม่บังคับตอบ: ปล่อยว่าง = ยังไม่ได้บันทึกข้อมูล (valid state) ── */}
       <div>
-        <label htmlFor="breed_status" className="block text-sm font-medium text-gray-700 mb-1">
-          สถานะสายพันธุ์
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          สายพันธุ์ (เลือกได้หลายรายการ)
         </label>
-        <div className="flex flex-wrap gap-2">
-          {BREED_STATUS_OPTIONS.map((s) => (
-            <button
-              key={s.key}
-              type="button"
-              aria-pressed={status === s.key}
-              onClick={() =>
-                setFormData((prev) => {
-                  // transition preserves everything — ห้าม silently delete (§9)
-                  const preserved = transitionBreedStatus(
-                    {
-                      breed_ids: prev.breed_ids ?? [],
-                      dominant_breed_id: prev.dominant_breed_id || null,
-                    },
-                    s.key
-                  );
-                  return {
-                    ...prev,
-                    breed_status: s.key,
-                    breed_ids: preserved.breed_ids,
-                    dominant_breed_id: preserved.dominant_breed_id ?? '',
-                  };
-                })
-              }
-              className={`
-                px-3 py-1.5 rounded-full border text-sm transition-colors
-                ${status === s.key
-                  ? 'border-orange-500 bg-orange-50 text-orange-700'
-                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}
-              `}
-            >
-              {s.label.th}
-            </button>
-          ))}
-        </div>
-
-        {/* Breed selector — แสดงเฉพาะเมื่อสถานะมีความหมายรองรับ (§8: Unknown → ไม่แสดง) */}
-        {status === 'purebred' && (
-          <div className="mt-3">
-            <label htmlFor="breed_ids" className="block text-sm font-medium text-gray-700 mb-1">
-              สายพันธุ์ (เลือก 1 รายการ)
-            </label>
-            <select
-              id="breed_ids"
-              value={formData.breed_ids?.[0] ?? ''}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  // การเลือกของผู้ใช้เอง — ไม่ใช่ระบบลบเงียบ
-                  breed_ids: e.target.value ? [e.target.value] : [],
-                }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">-- เลือกสายพันธุ์ --</option>
-              {BREED_VOCABULARY.map((b) => (
-                <option key={b.key} value={b.key}>
-                  {b.label.th}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {status === 'mixed' && (
-          <div className="mt-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Known Breeds (เลือกได้หลายรายการ)
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {BREED_VOCABULARY.map((b) => {
-                const selected = (formData.breed_ids ?? []).includes(b.key);
-                return (
-                  <button
-                    key={b.key}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => toggleBreed(b.key)}
-                    className={`
-                      px-2.5 py-1 rounded-full border text-xs transition-colors
-                      ${selected
-                        ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}
-                    `}
-                  >
-                    {selected ? '☑ ' : ''}{b.label.th}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              ไม่ทราบว่าผสมอะไร → ไม่ต้องเลือกเลยก็ได้ — ระบบเก็บว่าเป็นพันธุ์ผสมเฉย ๆ
-            </p>
-
-            {/* Dominant Appearance (§2) — Owner Observation · optional · ทั้ง vocab
-                (ไม่จำกัดเฉพาะ Known Breeds — clarification #3) · ห้าม auto-select */}
-            <div className="mt-3">
-              <label htmlFor="dominant_breed_id" className="block text-sm font-medium text-gray-700 mb-1">
-                ลักษณะที่ดูเด่น (Optional)
-              </label>
-              <select
-                id="dominant_breed_id"
-                value={formData.dominant_breed_id ?? ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, dominant_breed_id: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="flex flex-wrap gap-1.5">
+          {/* ตัวเลือก "ยังไม่สามารถระบุได้" — หนึ่งในชุดเดียวกัน (mutually exclusive
+              กับการเลือกสายพันธุ์: เลือกสายพันธุ์ = ยกเลิกอันนี้เอง) */}
+          <button
+            type="button"
+            aria-pressed={unknownSelected}
+            onClick={() =>
+              setFormData((prev) => ({
+                ...prev,
+                breed_status: prev.breed_status === 'unknown' ? '' : 'unknown',
+              }))
+            }
+            className={`
+              px-2.5 py-1 rounded-full border text-xs transition-colors
+              ${unknownSelected
+                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}
+            `}
+          >
+            {unknownSelected ? '☑ ' : ''}ยังไม่สามารถระบุได้
+          </button>
+          {BREED_VOCABULARY.map((b) => {
+            const selected = !unknownSelected && (formData.breed_ids ?? []).includes(b.key);
+            return (
+              <button
+                key={b.key}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => toggleBreed(b.key)}
+                className={`
+                  px-2.5 py-1 rounded-full border text-xs transition-colors
+                  ${selected
+                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}
+                `}
               >
-                <option value="">-- ไม่ระบุ --</option>
-                {BREED_VOCABULARY.map((b) => (
-                  <option key={b.key} value={b.key}>
-                    {b.label.th}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-400 mt-1">
-                สิ่งที่เจ้าของสังเกตเองว่าดูเด่น/คล้ายสายพันธุ์ใด — เลือกจากทั้งรายการได้
-                ไม่ต้องตรงกับ Known Breeds · ระบบไม่เดาและไม่ดึงจากพ่อแม่ให้
-              </p>
-            </div>
-          </div>
-        )}
-
-        {status === 'unknown' && (
-          <p className="text-xs text-gray-400 mt-2">
-            ไม่ต้องเลือกสายพันธุ์ — ระบบเก็บว่ายังระบุไม่ได้ (มีข้อมูลให้ แต่ไม่ตัดสิน)
-          </p>
-        )}
-
-        {status === null && (
-          <p className="text-xs text-gray-400 mt-2">
-            เลือกสถานะสายพันธุ์ก่อน เพื่อให้ช่องกรอกตรงกับความหมายของข้อมูล
-          </p>
-        )}
+                {selected ? '☑ ' : ''}{b.label.th}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          ปล่อยว่างได้ — รู้เพิ่มเมื่อไหร่ค่อยเติม · ระบบไม่ตัดสินว่าเป็นพันธุ์แท้หรือผสม
+        </p>
 
         {showBreedPreservationNotice && (
           <p className="text-xs text-amber-600 mt-2">
             ⚠️ มีรายการสายพันธุ์ที่เคยเลือกไว้ {preservedBreedCount} รายการ —
-            ข้อมูลไม่ถูกลบ แต่จะไม่ถูกบันทึกขณะใช้สถานะนี้ (เปลี่ยนสถานะเพื่อแก้ไขต่อ)
+            ข้อมูลไม่ถูกลบ แต่จะไม่ถูกบันทึกขณะเลือก "ยังไม่สามารถระบุได้"
           </p>
         )}
 
@@ -520,39 +425,9 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
         )}
       </div>
 
-      {/* ── Pattern (§4, §5) — semantic แยกจาก Color · vocabulary CHECK-locked ·
-          compatibility กรองเฉพาะสิ่งที่ขัดแน่นอน (Assist, not decide) ── */}
-      <div>
-        <label htmlFor="color_pattern" className="block text-sm font-medium text-gray-700 mb-1">
-          ลักษณะสี (Pattern)
-        </label>
-        <select
-          id="color_pattern"
-          value={formData.color_pattern}
-          onChange={(e) => setFormData({ ...formData, color_pattern: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">-- ไม่ระบุ --</option>
-          {PATTERN_VOCABULARY.map((p) => {
-            const impossible = patterns !== null && !patterns.some((a) => a.key === p.key);
-            return (
-              <option key={p.key} value={p.key} disabled={impossible}>
-                {p.label.th}{impossible ? ' (ขัดกับจำนวนสีที่เลือก)' : ''}
-              </option>
-            );
-          })}
-        </select>
-        {currentPatternBlocked ? (
-          <p className="text-xs text-amber-600 mt-1">
-            ⚠️ ลักษณะสีที่เลือกไว้ขัดกับจำนวนสีปัจจุบัน — ค่าเดิมยังไม่ถูกลบ
-            แต่แนะนำให้เลือกใหม่ให้สอดคล้องก่อนบันทึก
-          </p>
-        ) : (
-          <p className="text-xs text-gray-400 mt-1">
-            จำนวนสีระบบนับให้เอง — ลักษณะสีบอกว่าสีกระจายบนตัวอย่างไร (เช่น สามสี หรือ ลายสลิด)
-          </p>
-        )}
-      </div>
+      {/* ── Pattern (§4, §5) — ปิดใน UI (future scope 2026-09-29): ไม่แสดงให้ผู้ใช้เลือก
+          ไม่เพิ่ม migration/domain ใหม่ · ค่าเดิมใน DB ยังถูก re-save ผ่าน normalize เดิม
+          (ถ้าแถวเดิมมีค่า จะถูกส่งกลับเหมือนเดิม — ไม่ silently delete) ── */}
 
       <div className="flex gap-3 pt-4">
         <button

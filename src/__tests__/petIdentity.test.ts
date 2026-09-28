@@ -222,15 +222,26 @@ describe('§1/§9 Breed status — requirements, transitions, no silent delete',
     }
   });
 
-  it('boundary sends unknown-status breeds as null (shape ตรง CHECK) — แต่ state เดิมไม่ถูกลบ', () => {
-    // unknown + รายการค้าง → boundary reject (บังคับ UX แจ้งผู้ใช้ ไม่ลบเงียบ)
-    expect(() =>
-      toPetInsertPayload(baseForm({ breed_status: 'unknown', breed_ids: ['persian'] }))
-    ).toThrow(/ไม่สามารถระบุได้/);
-    // unknown แบบไม่มีรายการ → null
-    expect(
-      toPetInsertPayload(baseForm({ breed_status: 'unknown', breed_ids: [] })).breed_ids
-    ).toBeNull();
+  it('boundary maps the breed-only contract onto the DB shape (2026-09-29)', () => {
+    // ยังไม่สามารถระบุได้ (unknown) + รายการค้าง → boundary ส่ง unknown + breed_ids=null
+    // (shape ตรง CHECK: unknown → count=0) — UI แจ้งผู้ใช้ผ่าน preservation notice แล้ว
+    const unknownPayload = toPetInsertPayload(
+      baseForm({ breed_status: 'unknown', breed_ids: ['persian'] })
+    );
+    expect(unknownPayload.breed_status).toBe('unknown');
+    expect(unknownPayload.breed_ids).toBeNull();
+
+    // เลือกสายพันธุ์ N รายการ → breed_status NULL (ระบบไม่ตัดสิน pure/mixed)
+    const breedsPayload = toPetInsertPayload(
+      baseForm({ breed_ids: ['persian', 'scottish_fold'] })
+    );
+    expect(breedsPayload.breed_status).toBeNull();
+    expect(breedsPayload.breed_ids).toEqual(['persian', 'scottish_fold']);
+
+    // ไม่เลือกอะไรเลย ≠ ยังไม่สามารถระบุได้ — ทั้งคู่ต้องแยกกันชัด
+    const emptyPayload = toPetInsertPayload(baseForm());
+    expect(emptyPayload.breed_status).toBeNull();
+    expect(emptyPayload.breed_ids).toBeNull();
   });
 });
 
@@ -238,7 +249,6 @@ describe('Boundary — payload normalization (Pet Identity fields)', () => {
   it('full payload: identity fields normalized, legacy passthrough untouched', () => {
     const payload = toPetInsertPayload(
       baseForm({
-        breed_status: 'mixed',
         breed_ids: ['persian', 'scottish_fold'],
         dominant_breed_id: 'scottish_fold',
         colors: ['orange', 'white'],
@@ -253,7 +263,7 @@ describe('Boundary — payload normalization (Pet Identity fields)', () => {
       species: 'Cat',
       nickname: 'โมจิ',
       breed: 'ขนมครกสามสี',
-      breed_status: 'mixed',
+      breed_status: null, // ระบบไม่ตัดสิน pure/mixed — breed_ids เป็นแหล่งเดียว (2026-09-29)
       breed_ids: ['persian', 'scottish_fold'],
       dominant_breed_id: 'scottish_fold',
       gender: null,

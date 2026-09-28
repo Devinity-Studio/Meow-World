@@ -6,7 +6,6 @@ import { th } from 'date-fns/locale';
 import {
   readPetIdentity,
   breedLabels,
-  breedStatusLabel,
   colorLabels,
   patternLabel,
   colorCountLabel,
@@ -28,7 +27,6 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
     identity.breed_ids.length > 0
       ? breedLabels(identity.breed_ids).join(' + ')
       : identity.legacyBreed;
-  const statusText = breedStatusLabel(identity.breed_status);
   const colorText =
     identity.colors.length > 0 ? colorLabels(identity.colors).join(' ') : pet.color;
   const patternText = patternLabel(identity.color_pattern);
@@ -69,7 +67,6 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
         <p>
           <span className="font-medium">สายพันธุ์:</span> {pet.species}
           {breedText && ` - ${breedText}`}
-          {statusText && ` (${statusText})`}
         </p>
         {pet.nickname && (
           <p>

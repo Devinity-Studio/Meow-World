@@ -8,7 +8,6 @@ import { th } from 'date-fns/locale';
 import {
   readPetIdentity,
   breedLabels,
-  breedStatusLabel,
   colorLabels,
   patternLabel,
   colorCountLabel,
@@ -115,7 +114,7 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
   const identity = readPetIdentity(pet);
   const breedValue =
     identity.breed_ids.length > 0
-      ? `${breedLabels(identity.breed_ids).join(' + ')}${breedStatusLabel(identity.breed_status) ? ` (${breedStatusLabel(identity.breed_status)})` : ''}`
+      ? breedLabels(identity.breed_ids).join(' + ')
       : identity.legacyBreed;
   const colorValue =
     identity.colors.length > 0
