@@ -6,6 +6,8 @@
 **Branch:** `qwen-prototype-v0`  
 **Status:** ✅ Implemented (Basic Identity)
 
+> 📘 **อัปเดตตำแหน่ง (2026-09-28):** ตาม Information Weight & Access Model ใหม่ Passport ปรับบทบาทจาก Primary Interface → **Supporting Information Layer** (ข้อมูลสำคัญสูง แต่เข้าถึงแบบ need-based เมื่อชีวิตต้องการ เช่น พาน้องไปหาหมอ) — Growth Model ทั้งหมดในเอกสารนี้ยังคงใช้ได้เดิมทุกอย่าง ดูบริบทเต็มที่ `docs/HOME_MODE_DESIGN_SPEC.md`
+
 ---
 
 ## 📐 Concept

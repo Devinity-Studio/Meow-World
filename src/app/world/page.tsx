@@ -7,6 +7,8 @@ import { Family, FamilyMember, JourneyEvent, Pet, UserProfile } from '@/types';
 import { HomeMode } from '@/components/home/HomeMode';
 import { buildJourneyEventPayload } from '@/utils/eventPayload';
 import { JOURNEY_EVENT_COLUMNS, adaptJourneyEventRow, JourneyEventRow } from '@/utils/journeyAdapter';
+import { HomeIdentityCard } from '@/components/home/HomeIdentityCard';
+import { buildHomeIdentitySummary, type HomeIdentitySummary } from '@/utils/homeIdentity';
 
 interface Home {
   id: string;
@@ -34,6 +36,7 @@ export default function WorldPage() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [identity, setIdentity] = useState<HomeIdentitySummary | null>(null);
   const [events, setEvents] = useState<JourneyEvent[]>([]);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
@@ -112,7 +115,8 @@ export default function WorldPage() {
         return;
       }
 
-      setPets((petsRes.data ?? []) as Pet[]);
+      const homePets = (petsRes.data ?? []) as Pet[];
+      setPets(homePets);
 
       const memberRows = (membersRes.data ?? []) as unknown as HomeMemberRow[];
       const familyMembers: FamilyMember[] = memberRows.map((row) => ({
@@ -124,6 +128,20 @@ export default function WorldPage() {
         joined_at: '',
       }));
       setMembers(familyMembers);
+
+      // Home Identity summary — "บ้านนี้คือใคร มีใครและอะไรอยู่ในบ้านนี้" (incomplete = valid)
+      setIdentity(
+        buildHomeIdentitySummary({
+          home: { id: home.id, name: home.name, description: home.description },
+          people: familyMembers.map((m) => ({
+            userId: m.user_id,
+            displayName: m.display_name,
+            avatarUrl: m.avatar_url ?? null,
+            role: m.role,
+          })),
+          pets: homePets,
+        })
+      );
 
       const authorNameById = new Map(familyMembers.map((m) => [m.user_id, m.display_name]));
       setEvents(
@@ -209,6 +227,12 @@ export default function WorldPage() {
   // ใน repo และ prod) — no-op เฉพาะเพื่อ satisfy existing props ตาม Design Lock ข้อ 4
   const handleToggleLike = (_eventId: string) => {};
   const handleAddComment = (_eventId: string, _commentText: string) => {};
+
+  // Home Identity editor → sync กลับ home + identity state (updated_at ตั้งโดย DB trigger)
+  function handleIdentitySaved(updated: { name: string; description: string | null }) {
+    setHome((prev) => (prev ? { ...prev, name: updated.name, description: updated.description } : prev));
+    setIdentity((prev) => (prev ? { ...prev, name: updated.name, description: updated.description } : prev));
+  }
 
   async function handleCreateHome(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -341,6 +365,15 @@ export default function WorldPage() {
         </div>
       )}
       <div className="mx-auto max-w-5xl">
+        {identity && (
+          <div className="mb-6">
+            <HomeIdentityCard
+              identity={identity}
+              isOwner={userRole === 'owner'}
+              onSaved={handleIdentitySaved}
+            />
+          </div>
+        )}
         <HomeMode
           family={family}
           members={members}

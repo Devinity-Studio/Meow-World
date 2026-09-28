@@ -91,6 +91,8 @@ Home ไม่ใช่เพียงพื้นที่ตกแต่ง �
 
 เช่น "อ๋อ บ้านตกแต่งแบบนี้ได้ด้วยเหรอ"
 
+> 📘 **อัปเดต 2026-09-28:** แนวคิด Home ได้ขยายเป็น **Home Identity → Home Building → Home Mode → Life Journey** พร้อม App Entry States (4 กรณี) และหลัก "สร้างบ้าน ≠ Create Home record" — ดูรายละเอียดที่ `docs/HOME_MODE_DESIGN_SPEC.md`
+
 ---
 
 ## 👥 User ID vs Home ID
