@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Family, FamilyMember, JourneyEvent, Pet, UserProfile } from '@/types';
 import { HomeMode } from '@/components/home/HomeMode';
+import { QRInviteModal } from '@/components/home/QRInviteModal';
 import { buildJourneyEventPayload } from '@/utils/eventPayload';
 import { JOURNEY_EVENT_COLUMNS, adaptJourneyEventRow, JourneyEventRow } from '@/utils/journeyAdapter';
 import { HomeIdentityCard } from '@/components/home/HomeIdentityCard';
@@ -37,6 +38,7 @@ export default function WorldPage() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [identity, setIdentity] = useState<HomeIdentitySummary | null>(null);
+  const [showQRInvite, setShowQRInvite] = useState(false);
   const [events, setEvents] = useState<JourneyEvent[]>([]);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
@@ -382,7 +384,7 @@ export default function WorldPage() {
           currentUser={currentUser ?? { id: '', displayName: 'ผู้เลี้ยง' }}
           userRole={userRole}
           onOpenMembersModal={() => {}}
-          onOpenQRInviteModal={() => {}}
+          onOpenQRInviteModal={() => setShowQRInvite(true)}
           onSelectPet={(petId) => router.push(`/pets/${petId}`)}
           onAddNewPet={() => router.push('/pets')}
           onAddEvent={handleAddEvent}
@@ -395,6 +397,17 @@ export default function WorldPage() {
           </div>
         )}
       </div>
+
+      {/* Invite จริง (V.0.999) — สร้าง token ใน qr_tokens ผูกบ้านนี้ */}
+      {showQRInvite && home && (
+        <QRInviteModal
+          isOpen={showQRInvite}
+          onClose={() => setShowQRInvite(false)}
+          family={family}
+          currentUserName={currentUser?.displayName ?? 'ผู้เลี้ยง'}
+          anchorPetId={pets[0]?.id}
+        />
+      )}
     </main>
   );
 }

@@ -17,6 +17,7 @@ import {
 import { ShareButton } from '@/components/qr/ShareButton';
 import { TokenList } from '@/components/qr/TokenList';
 import { ProgressivePassport } from '@/components/passport/ProgressivePassport';
+import { CertificateSection } from '@/components/certificate/CertificateSection';
 
 const EVENT_TYPES = [
   { value: 'medical', label: 'การรักษาพยาบาล', color: 'bg-red-100 text-red-800' },
@@ -38,6 +39,7 @@ export default function PetDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showTokens, setShowTokens] = useState(false);
   const [showPassport, setShowPassport] = useState(false);
+  const [certContext, setCertContext] = useState<{ homeId: string; userId: string } | null>(null);
 
   const supabase = createClient();
 
@@ -63,6 +65,16 @@ export default function PetDetailPage() {
 
       if (eventsError) throw eventsError;
       setEvents(eventsData || []);
+
+      // Certificate context — home ของน้อง (RLS ตาราง digital_certificates ผูก home_members)
+      const { data: certHome } = await supabase
+        .from('home_members')
+        .select('home_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+        .limit(1);
+      if (certHome && certHome.length > 0) {
+        setCertContext({ homeId: certHome[0].home_id, userId: (await supabase.auth.getUser()).data.user!.id });
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'ไม่สามารถโหลดข้อมูลสัตว์เลี้ยงได้';
       setError(message);
@@ -324,6 +336,11 @@ export default function PetDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Certificate Section (V.0.999) — Import เอกสารจริง + เปิดดู */}
+      {certContext && (
+        <CertificateSection petId={petId} homeId={certContext.homeId} userId={certContext.userId} />
+      )}
 
       {/* Token List Modal */}
       {showTokens && (

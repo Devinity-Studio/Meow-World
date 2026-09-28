@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Pet, PetFormData, PetInsertPayload } from '@/types/pet';
+import { buildBirthPayload, readBirthInfo } from '@/utils/birthInfo';
 import { SPECIES_OPTIONS } from './petFormOptions';
 import {
   BREED_VOCABULARY,
@@ -58,6 +59,16 @@ export function toPetInsertPayload(form: PetFormData): PetInsertPayload {
   const colors = normalizeColorList(form.colors);
   if (colors.invalid) throw new Error(colors.reason);
 
+  // Birth component storage (V.0.999) — "รู้แค่ไหน → บันทึกแค่นั้น":
+  // legacy birth_date ไม่มีใน form แล้ว (แทนด้วย precision + component fields)
+  const birth = buildBirthPayload({
+    precision: form.birth_precision,
+    year: form.birth_year,
+    month: form.birth_month,
+    day: form.birth_day,
+  });
+  if (birth.invalid) throw new Error(birth.reason);
+
   return {
     name: form.name,
     species: form.species,
@@ -67,7 +78,11 @@ export function toPetInsertPayload(form: PetFormData): PetInsertPayload {
     breed_ids: breeds.value,
     dominant_breed_id: dominant.value,
     gender: form.gender || null,
-    birth_date: form.birth_date || null,
+    birth_date: birth.payload.birth_date,
+    birth_year: birth.payload.birth_year,
+    birth_month: birth.payload.birth_month,
+    birth_day: birth.payload.birth_day,
+    birth_precision: birth.payload.birth_precision,
     color: form.color?.trim() || null,
     colors: colors.value,
     color_pattern: pattern.value,
@@ -85,7 +100,16 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
     breed_ids: pet?.breed_ids || [],
     dominant_breed_id: pet?.dominant_breed_id || '',
     gender: pet?.gender || '',
-    birth_date: pet?.birth_date ? pet.birth_date.substring(0, 10) : '',
+    // Birth component storage — อ่านผ่าน adapter (legacy row ได้ exact โดยตีความ)
+    ...(() => {
+      const birth = readBirthInfo(pet ?? {});
+      return {
+        birth_precision: birth.precision ?? '',
+        birth_year: birth.year !== null ? String(birth.year) : '',
+        birth_month: birth.month !== null ? String(birth.month) : '',
+        birth_day: birth.day !== null ? String(birth.day) : '',
+      };
+    })(),
     color: pet?.color || '',
     colors: pet?.colors || [],
     color_pattern: pet?.color_pattern || '',
@@ -364,19 +388,100 @@ export function PetForm({ pet, onSubmit, onCancel, isLoading = false }: PetFormP
             <option value="Unknown">ไม่ทราบ</option>
           </select>
         </div>
+      </div>
 
-        <div>
-          <label htmlFor="birth_date" className="block text-sm font-medium text-gray-700 mb-1">
-            วันเกิด
-          </label>
-          <input
-            type="date"
-            id="birth_date"
-            value={formData.birth_date}
-            onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      {/* ── Birth Info (V.0.999) — precision-first: "รู้แค่ไหน → บันทึกแค่นั้น" ── */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          รู้วันเกิดแค่ไหน?
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {([
+            { key: 'year', label: 'แค่ปี' },
+            { key: 'month', label: 'ปี + เดือน' },
+            { key: 'exact', label: 'วันที่แน่นอน' },
+          ] as const).map((opt) => {
+            const selected = formData.birth_precision === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setFormData({ ...formData, birth_precision: opt.key })}
+                className={`
+                  px-2.5 py-1 rounded-full border text-xs transition-colors
+                  ${selected
+                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}
+                `}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+          {formData.birth_precision && (
+            <button
+              type="button"
+              aria-label="ล้างวันเกิด"
+              onClick={() => setFormData({ ...formData, birth_precision: '', birth_year: '', birth_month: '', birth_day: '' })}
+              className="px-2.5 py-1 rounded-full border border-gray-300 bg-white text-xs text-gray-500 hover:border-gray-400"
+            >
+              ยังไม่ระบุ
+            </button>
+          )}
         </div>
+
+        {formData.birth_precision && (
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <div>
+              <label htmlFor="birth_year" className="block text-xs text-gray-500 mb-1">ปี *</label>
+              <input
+                type="number"
+                id="birth_year"
+                min={1900}
+                max={2100}
+                value={formData.birth_year}
+                onChange={(e) => setFormData({ ...formData, birth_year: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="2563"
+              />
+            </div>
+            {(formData.birth_precision === 'month' || formData.birth_precision === 'exact') && (
+              <div>
+                <label htmlFor="birth_month" className="block text-xs text-gray-500 mb-1">เดือน *</label>
+                <select
+                  id="birth_month"
+                  value={formData.birth_month}
+                  onChange={(e) => setFormData({ ...formData, birth_month: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">เลือกเดือน</option>
+                  {['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'].map((name, idx) => (
+                    <option key={idx + 1} value={idx + 1}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {formData.birth_precision === 'exact' && (
+              <div>
+                <label htmlFor="birth_day" className="block text-xs text-gray-500 mb-1">วันที่ *</label>
+                <input
+                  type="number"
+                  id="birth_day"
+                  min={1}
+                  max={31}
+                  value={formData.birth_day}
+                  onChange={(e) => setFormData({ ...formData, birth_day: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="15"
+                />
+              </div>
+            )}
+          </div>
+        )}
+        {!formData.birth_precision && (
+          <p className="mt-1 text-xs text-gray-400">ไม่รู้วันเกิดก็บันทึกได้ — รู้เพิ่มเมื่อไหร่ค่อยเติม</p>
+        )}
       </div>
 
       {/* ── Colors (§3) — multi-select stable keys · color_count = derived (read-only) ── */}

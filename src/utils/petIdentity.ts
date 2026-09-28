@@ -42,8 +42,8 @@ export const BREED_KEYS = [
   'british_shorthair',
   'khao_manee',
   'wichianmat',
-  'orange_tabby',
-  'golden_shorthair',
+  'korat',
+  'thai_native',
   'other',
 ] as const;
 
@@ -60,8 +60,9 @@ export const BREED_VOCABULARY: BreedOption[] = [
   { key: 'british_shorthair', label: { th: 'บริติช ช็อตแฮร์', en: 'British Shorthair' } },
   { key: 'khao_manee', label: { th: 'ขาวมณี', en: 'Khao Manee' } },
   { key: 'wichianmat', label: { th: 'วิเชียรมาศ', en: 'Wichianmat' } },
-  { key: 'orange_tabby', label: { th: 'ส้มลายเสือ', en: 'Orange Tabby' } },
-  { key: 'golden_shorthair', label: { th: 'ขนสั้นสีทอง', en: 'Golden Shorthair' } },
+  // Semantic Correction (2026-09-28): สีสวาด = ชื่อไทยของโคราช — แยกสี/ลายออกจาก breed
+  { key: 'korat', label: { th: 'โคราช (สีสวาด)', en: 'Korat' } },
+  { key: 'thai_native', label: { th: 'ไทยพื้นบ้าน', en: 'Thai Native' } },
   { key: 'other', label: { th: 'อื่น ๆ', en: 'Other' } },
 ];
 

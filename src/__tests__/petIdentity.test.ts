@@ -48,7 +48,10 @@ function baseForm(overrides: Partial<PetFormData> = {}): PetFormData {
     breed_ids: [],
     dominant_breed_id: '',
     gender: '',
-    birth_date: '',
+    birth_precision: '',
+    birth_year: '',
+    birth_month: '',
+    birth_day: '',
     color: '',
     colors: [],
     color_pattern: '',
@@ -82,7 +85,10 @@ describe('§1 Breed vocabulary — stable keys + localized labels', () => {
 
   it('breed vocabulary is UI-independent and extensible (§1)', () => {
     const keys = BREED_KEYS as readonly string[];
-    expect(keys).toEqual(expect.arrayContaining(['persian', 'scottish_fold', 'british_shorthair']));
+    expect(keys).toEqual(expect.arrayContaining(['persian', 'scottish_fold', 'british_shorthair', 'korat', 'thai_native']));
+    // Semantic Correction (2026-09-28): colour/pattern keys ห้ามปนเป็น breed
+    expect(keys).not.toContain('orange_tabby');
+    expect(keys).not.toContain('golden_shorthair');
     expect(new Set(keys).size).toBe(keys.length); // no duplicate keys
   });
 });
@@ -252,6 +258,10 @@ describe('Boundary — payload normalization (Pet Identity fields)', () => {
       dominant_breed_id: 'scottish_fold',
       gender: null,
       birth_date: null,
+      birth_year: null,
+      birth_month: null,
+      birth_day: null,
+      birth_precision: null,
       color: 'ส้ม ขาว',
       colors: ['orange', 'white'],
       color_pattern: 'tabby',
@@ -270,6 +280,10 @@ describe('Boundary — payload normalization (Pet Identity fields)', () => {
       dominant_breed_id: null,
       gender: null,
       birth_date: null,
+      birth_year: null,
+      birth_month: null,
+      birth_day: null,
+      birth_precision: null,
       color: null,
       colors: null,
       color_pattern: null,
@@ -351,9 +365,13 @@ describe('§7 Parent / Lineage — never derived from parents', () => {
   });
 });
 
-describe('Drift guard — module vocabulary ≡ migration 20260927100000 literal (clarification #1)', () => {
+describe('Drift guard — module vocabulary ≡ migration literals (clarification #1)', () => {
+  // Source of truth ปัจจุบัน: 20260927100000 สร้าง vocab + 20260928200000 แก้ breed semantics
+  // (korat/thai_native in, orange_tabby/golden_shorthair out) — drift guard ต้องอ่านทั้งสองไฟล์
   const migrationPath = path.resolve(__dirname, '../../supabase/migrations/20260927100000_add_pet_identity_domain.sql');
+  const breedMigrationPath = path.resolve(__dirname, '../../supabase/migrations/20260928200000_breed_semantic_correction.sql');
   const migrationSql = readFileSync(migrationPath, 'utf8');
+  const breedMigrationSql = readFileSync(breedMigrationPath, 'utf8');
 
   it('migration file exists and locks every vocabulary as literals', () => {
     expect(migrationSql).toContain('pets_breed_ids_allowed');
@@ -363,12 +381,13 @@ describe('Drift guard — module vocabulary ≡ migration 20260927100000 literal
     expect(migrationSql).toContain('pets_breed_status_shape');
   });
 
-  it('breed literal list ≡ BREED_KEYS', () => {
-    const section = migrationSql.slice(
-      migrationSql.indexOf('pets_breed_ids_allowed'),
-      migrationSql.indexOf('pets_dominant_breed_id_allowed')
-    );
-    for (const key of BREED_KEYS) expect(section).toContain(`'${key}'`);
+  it('breed literal list ≡ BREED_KEYS (current semantics from 20260928200000)', () => {
+    // breed vocab ถูกแก้โดย migration ล่าสุด — literal ต้องอยู่ในไฟล์นั้น
+    for (const key of BREED_KEYS) expect(breedMigrationSql).toContain(`'${key}'`);
+    // และ migration เก่าต้องไม่มี key ที่ถูกถอดอยู่ใน module ปัจจุบัน (อนุญาตให้มี literal เก่า
+    // ในไฟล์เก่าได้เพราะ DB CHECK ปัจจุบันถูก drop/re-add โดย migration ใหม่แล้ว)
+    expect(breedMigrationSql).not.toContain("'orange_tabby'");
+    expect(breedMigrationSql).not.toContain("'golden_shorthair'");
   });
 
   it('color literal list ≡ COLOR_KEYS', () => {

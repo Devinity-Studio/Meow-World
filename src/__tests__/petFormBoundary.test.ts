@@ -27,14 +27,17 @@ function baseForm(overrides: Partial<PetFormData> = {}): PetFormData {
     nickname: '',
     breed: '',
     gender: '',
-    birth_date: '',
+    birth_precision: '',
+    birth_year: '',
+    birth_month: '',
+    birth_day: '',
     color: '',
     ...overrides,
   };
 }
 
 describe('toPetInsertPayload — Direct Add input boundary', () => {
-  it('maps empty optional fields to null (never empty string)', () => {
+  it('maps empty optional fields to null (never empty string) — birth unset = all null', () => {
     const payload = toPetInsertPayload(baseForm());
     expect(payload).toEqual({
       name: 'น้องโมจิ',
@@ -46,17 +49,38 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
       dominant_breed_id: null,
       gender: null,
       birth_date: null,
+      birth_year: null,
+      birth_month: null,
+      birth_day: null,
+      birth_precision: null,
       color: null,
       colors: null,
       color_pattern: null,
     });
   });
 
-  it('keeps the killer case safe: missing birth_date becomes null, not ""', () => {
+  it('keeps the killer case safe: no birth info → birth_date null, never ""', () => {
     // Root cause #2: birth_date: '' once reached Postgres as "" → 22007 → 400
-    const payload = toPetInsertPayload(baseForm({ birth_date: '' }));
+    // (V.0.999: birth ไม่กรอกเลยก็ valid — payload ต้องไม่มี empty string หลุด)
+    const payload = toPetInsertPayload(baseForm());
     expect(payload.birth_date).toBeNull();
     expect(payload.birth_date).not.toBe('');
+  });
+
+  it('birth exact: component fields + birth_date เดินพร้อมกัน (ครบวันจริง ไม่ใช่ fake)', () => {
+    const payload = toPetInsertPayload(
+      baseForm({ birth_precision: 'exact', birth_year: '2026', birth_month: '9', birth_day: '26' })
+    );
+    expect(payload.birth_date).toBe('2026-09-26');
+    expect(payload.birth_year).toBe(2026);
+    expect(payload.birth_precision).toBe('exact');
+  });
+
+  it('birth year-only: ไม่มี birth_date (ห้าม fake date)', () => {
+    const payload = toPetInsertPayload(baseForm({ birth_precision: 'year', birth_year: '2020' }));
+    expect(payload.birth_precision).toBe('year');
+    expect(payload.birth_year).toBe(2020);
+    expect(payload.birth_date).toBeNull();
   });
 
   it('keeps provided legacy values as trimmed strings', () => {
@@ -65,7 +89,10 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
         nickname: '  โมจิ  ',
         breed: 'วิเชียรมาศ',
         gender: 'Male',
-        birth_date: '2026-09-26',
+        birth_precision: 'exact',
+        birth_year: '2026',
+        birth_month: '9',
+        birth_day: '26',
         color: 'เทา',
         color_pattern: 'tricolor',
       })
@@ -80,6 +107,10 @@ describe('toPetInsertPayload — Direct Add input boundary', () => {
       dominant_breed_id: null,
       gender: 'Male',
       birth_date: '2026-09-26',
+      birth_year: 2026,
+      birth_month: 9,
+      birth_day: 26,
+      birth_precision: 'exact',
       color: 'เทา',
       colors: null,
       color_pattern: 'tricolor',

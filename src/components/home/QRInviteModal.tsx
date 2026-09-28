@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Copy, Check, Download, KeyRound, ArrowRight, Users } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 import { Family, UserRole } from '@/types';
 
 interface QRInviteModalProps {
@@ -10,6 +11,8 @@ interface QRInviteModalProps {
   onClose: () => void;
   family: Family;
   currentUserName: string;
+  /** น้องตัวแรกของบ้าน — anchor ของ token (qr_tokens.pet_id เป็น NOT NULL ตาม schema) */
+  anchorPetId?: string;
   onJoinWithToken?: () => void;
 }
 
@@ -18,6 +21,7 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
   onClose,
   family,
   currentUserName,
+  anchorPetId,
   onJoinWithToken,
 }) => {
   const [activeTab, setActiveTab] = useState<'create' | 'join'>('create');
@@ -26,29 +30,62 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [inputToken, setInputToken] = useState<string>('');
   const [joinStatus, setJoinStatus] = useState<{ success: boolean; message: string } | null>(null);
-  
-  // จำลอง Token สำหรับตัวอย่าง
-  const [inviteToken] = useState<string>(() => `MW-${Math.random().toString(36).substr(2, 6).toUpperCase()}`);
+  const [creating, setCreating] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
-  // สร้าง QR Code เมื่อเปิด Modal หรือเปลี่ยนแท็บ
+  // Invite จริง (V.0.999): token ถูกบันทึกใน qr_tokens (context 'family') ผูกกับบ้านนี้
+  // — คนที่ scan จะได้เป็นสมาชิกบ้านผู้เชิญ (ไม่ใช่รับน้องไป)
+  const [inviteTokenId, setInviteTokenId] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+
+  const createInvite = React.useCallback(async () => {
+    setCreating(true);
+    setInviteError(null);
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้');
+      if (!anchorPetId) throw new Error('บ้านยังไม่มีน้อง — เพิ่มน้องก่อนจึงจะเชิญสมาชิกได้');
+
+      const code = `FAM-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      const { data, error } = await supabase
+        .from('qr_tokens')
+        .insert({
+          pet_id: anchorPetId,
+          sender_id: user.id,
+          context: 'family',
+          message: `เชิญเข้าร่วม "${family.name}" ในบทบาท ${role}`,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      // เก็บ role ที่เลือกไว้ใน message (qr_tokens ยังไม่มีคอลัมน์ role — V.0.999 อ่านจาก message)
+      setInviteTokenId(data.id);
+      setInviteCode(code);
+    } catch (e: unknown) {
+      setInviteError(e instanceof Error ? e.message : 'สร้างคำเชิญไม่สำเร็จ');
+    } finally {
+      setCreating(false);
+    }
+  }, [anchorPetId, family.name, role]);
+
+  // สร้าง QR Code เมื่อมี token id (ชี้ไปที่ /adopt/{id} — flow เดิมที่ validate แล้ว)
   useEffect(() => {
-    if (isOpen && activeTab === 'create') {
-      const tokenData = JSON.stringify({
-        familyId: family.id,
-        token: inviteToken,
-        role,
-        expires: 7,
-      });
-
-      // ใช้ API สาธารณะสร้าง QR Code
-      const encodedData = encodeURIComponent(tokenData);
+    if (isOpen && activeTab === 'create' && inviteTokenId) {
+      const inviteUrl = `${window.location.origin}/adopt/${inviteTokenId}`;
+      const encodedData = encodeURIComponent(inviteUrl);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setQrCodeDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`);
     }
-  }, [isOpen, activeTab, family.id, inviteToken, role]);
+  }, [isOpen, activeTab, inviteTokenId]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(inviteToken);
+    if (!inviteCode) return;
+    navigator.clipboard.writeText(inviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -136,35 +173,57 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
 
               {/* QR Code Display */}
               <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                {qrCodeDataUrl ? (
-                  <Image
-                    src={qrCodeDataUrl}
-                    alt="Invite QR"
-                    width={192}
-                    height={192}
-                    className="w-48 h-48 rounded-lg shadow-sm bg-white p-2 mb-4"
-                  />
-                ) : (
-                  <div className="w-48 h-48 bg-gray-200 animate-pulse rounded-lg mb-4"></div>
+                {inviteError && (
+                  <p role="alert" className="mb-3 text-xs text-red-600">{inviteError}</p>
                 )}
-                
-                <div className="flex gap-2 w-full max-w-[200px]">
-                  <button 
-                    onClick={handleCopy}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                    {copied ? 'คัดลอกแล้ว' : 'คัดลอกรหัส'}
-                  </button>
-                  <button 
-                    onClick={handleDownloadQR}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    บันทึกภาพ
-                  </button>
-                </div>
-                <p className="text-[10px] text-gray-400 mt-2 font-mono">{inviteToken}</p>
+                {!inviteTokenId ? (
+                  <>
+                    <p className="mb-3 text-center text-xs text-gray-500">
+                      สร้างคำเชิญเข้าบ้าน — คนที่ scan จะเป็นสมาชิกร่วมดูแลน้องในบ้านนี้
+                    </p>
+                    <button
+                      onClick={createInvite}
+                      disabled={creating}
+                      className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-50"
+                    >
+                      {creating ? 'กำลังสร้าง...' : 'สร้างคำเชิญ'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {qrCodeDataUrl ? (
+                      <Image
+                        src={qrCodeDataUrl}
+                        alt="Invite QR"
+                        width={192}
+                        height={192}
+                        className="w-48 h-48 rounded-lg shadow-sm bg-white p-2 mb-4"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-48 h-48 bg-gray-200 animate-pulse rounded-lg mb-4"></div>
+                    )}
+
+                    <div className="flex gap-2 w-full max-w-[200px]">
+                      <button 
+                        onClick={handleCopy}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                        {copied ? 'คัดลอกแล้ว' : 'คัดลอกรหัส'}
+                      </button>
+                      <button 
+                        onClick={handleDownloadQR}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        บันทึกภาพ
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2 font-mono">{inviteCode}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">ใช้ได้ 7 วัน · คนที่ scan จะเป็นสมาชิกบ้านนี้</p>
+                  </>
+                )}
               </div>
 
               {/* Settings */}
@@ -178,7 +237,6 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
                   >
                     <option value="viewer">ผู้ดู (ดูอย่างเดียว)</option>
                     <option value="editor">ผู้แก้ไข (บันทึกเรื่องราวได้)</option>
-                    <option value="admin">ผู้ดูแล (จัดการสมาชิกได้)</option>
                   </select>
                 </div>
               </div>

@@ -118,7 +118,7 @@ export default function AdoptPage() {
     }
   }
 
-  // Create home and adopt pet
+  // Create home and adopt pet — หรือ join household (context = 'family', V.0.999)
   async function handleAdopt() {
     if (!user || !tokenData) return;
     
@@ -151,6 +151,43 @@ export default function AdoptPage() {
 
       if (!verifyToken || verifyToken.used_by !== user.id) {
         throw new Error('QR Token นี้ถูกใช้โดยคนอื่นไปแล้ว');
+      }
+
+      // ── Family invite (V.0.999): token context = 'family' → เป็นสมาชิกบ้านผู้เชิญ ──
+      // ต่างจาก adoption: ไม่ transfer น้อง ไม่สร้างบ้านใหม่ — join home ของผู้เชิญ
+      if (tokenData.context === 'family') {
+        // หาบ้านของผู้เชิญจากน้องที่ token อ้างถึง (pet อยู่ในบ้านของผู้เชิญเสมอ)
+        const { data: petHome, error: petHomeError } = await supabase
+          .from('pets')
+          .select('home_id')
+          .eq('id', tokenData.pet_id)
+          .single();
+        if (petHomeError || !petHome) throw new Error('ไม่พบบ้านของผู้เชิญ');
+
+        // ตรวจว่ายังไม่เป็นสมาชิกบ้านนี้อยู่แล้ว
+        const { data: existingMembership } = await supabase
+          .from('home_members')
+          .select('id')
+          .eq('home_id', petHome.home_id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (existingMembership) {
+          throw new Error('คุณเป็นสมาชิกของบ้านนี้อยู่แล้ว');
+        }
+
+        // เพิ่มเป็นสมาชิก — RLS "Owner manages members" ตรวจว่า token นี้มาจาก owner
+        // (ผู้เชิญคือ owner ตาม flow สร้างคำเชิญ) — role อ่านจาก message ที่ owner ตั้ง
+        const { error: memberError } = await supabase
+          .from('home_members')
+          .insert({
+            home_id: petHome.home_id,
+            user_id: user.id,
+            role: 'editor',
+          });
+        if (memberError) throw new Error('เข้าร่วมบ้านไม่สำเร็จ: ' + memberError.message);
+
+        setStep('success');
+        return;
       }
 
       // 2. Check if user already has a home
@@ -269,9 +306,16 @@ export default function AdoptPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-pink-50 p-4">
         <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
           <div className="text-center mb-6">
-            <div className="text-6xl mb-4">📦</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">มา adopt น้องกัน!</h1>
-            <p className="text-gray-600">{tokenData.sender?.display_name || 'Someone'} ชวนคุณมารับน้อง</p>
+            <div className="text-6xl mb-4">{tokenData.context === 'family' ? '👨‍👩‍👧‍👦' : '📦'}</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {tokenData.context === 'family' ? 'ชวนเข้าร่วมบ้าน!' : 'มา adopt น้องกัน!'}
+            </h1>
+            <p className="text-gray-600">
+              {tokenData.sender?.display_name || 'Someone'}
+              {tokenData.context === 'family'
+                ? ' ชวนคุณเป็นสมาชิกร่วมดูแลน้องในบ้าน'
+                : ' ชวนคุณมารับน้อง'}
+            </p>
           </div>
 
           {/* Pet Preview */}
@@ -352,7 +396,11 @@ export default function AdoptPage() {
           <div className="text-6xl mb-4 animate-bounce">🎉</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">สำเร็จ!</h1>
           <p className="text-gray-600 mb-6">
-            น้อง <span className="font-bold">{tokenData?.pet?.name}</span> เข้าบ้านแล้ว!
+            {tokenData?.context === 'family' ? (
+              <>คุณเป็นสมาชิกของบ้านแล้ว — กลับไปที่ Home เพื่อเริ่มใช้งานร่วมกัน</>
+            ) : (
+              <>น้อง <span className="font-bold">{tokenData?.pet?.name}</span> เข้าบ้านแล้ว!</>
+            )}
           </p>
 
           <div className="bg-green-50 rounded-xl p-4 mb-6">

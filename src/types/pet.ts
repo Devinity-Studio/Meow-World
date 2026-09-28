@@ -14,6 +14,12 @@ export interface Pet {
   dominant_breed_id?: string | null;
   gender?: string | null;
   birth_date?: string | null;
+  /** Birth component storage (V.0.999) — "เก็บเท่าที่รู้ ไม่เติมค่าที่ไม่รู้" */
+  birth_year?: number | null;
+  birth_month?: number | null;
+  birth_day?: number | null;
+  /** 'year' | 'month' | 'exact' — NULL = legacy row (อ่านผ่าน birth_date adapter) */
+  birth_precision?: string | null;
   /** Legacy space-joined free text ("ส้ม ขาว") — คงอยู่เพื่ออ่านข้อมูลเดิม */
   color?: string | null;
   /** สีจริงหลายสี — stable keys TEXT[] (CHECK pets_colors_allowed) · color_count = derived */
@@ -56,6 +62,11 @@ export interface PetInsertPayload {
   dominant_breed_id?: string | null;
   gender?: string | null;
   birth_date?: string | null;
+  /** Birth component storage (V.0.999) — shape ตรวจที่ app boundary + DB CHECK */
+  birth_year?: number | null;
+  birth_month?: number | null;
+  birth_day?: number | null;
+  birth_precision?: string | null;
   color?: string | null;
   colors?: string[] | null;
   /** CHECK-locked vocabulary — null when not provided */
@@ -74,7 +85,11 @@ export interface PetFormData {
   /** raw breed key ('' when untouched) — normalized at the boundary */
   dominant_breed_id?: string;
   gender?: string;
-  birth_date?: string;
+  /** raw precision key ('' when untouched) — normalized at the boundary (V.0.999) */
+  birth_precision?: string | undefined;
+  birth_year?: string | undefined;
+  birth_month?: string | undefined;
+  birth_day?: string | undefined;
   color?: string;
   /** raw color keys — normalized at the boundary */
   colors?: string[];
