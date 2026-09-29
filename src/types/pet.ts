@@ -141,7 +141,13 @@ export interface Litter {
 
 export interface LitterFormData {
   name: string;
-  birth_date: string;
+  /** legacy column — Wizard ใหม่เขียนเฉพาะ precision='exact' (ห้าม fake date) */
+  birth_date?: string;
+  /** Birth Contract เดียวกับ PetForm — raw UI fields, normalize ผ่าน buildBirthPayload */
+  birth_precision?: string;
+  birth_year?: string;
+  birth_month?: string;
+  birth_day?: string;
   location: string;
   notes?: string;
   mother_id?: string | null;
@@ -154,9 +160,22 @@ export interface BabyData {
   name: string;
   nickname?: string;
   gender?: string;
+  /** @deprecated legacy free text — คง type ไว้ให้ข้อมูลเดิมอ่านได้ แต่ UI ใหม่ไม่เขียน */
   breed?: string;
+  /** @deprecated legacy free text — คง type ไว้ให้ข้อมูลเดิมอ่านได้ แต่ UI ใหม่ไม่เขียน */
   color?: string;
+  /** Stable keys (CHECK-locked) — แหล่งข้อมูลสายพันธุ์เดียวตาม breed-only contract */
+  breed_ids?: string[];
+  /** 'unknown' = ยังไม่สามารถระบุได้ · NULL/undefined = ยังไม่ได้บันทึกข้อมูล */
+  breed_status?: 'unknown' | null;
+  /** Stable keys (CHECK-locked) — สีจริงหลายสี */
+  colors?: string[];
   birth_weight?: number;
   special_traits?: string[];
   birth_date_override?: string; // if different from litter default
+  /** Birth Contract เดียวกับ PetForm — override ของลูกแต่ละตัว ('' = ใช้ของครอก) */
+  birth_precision?: string;
+  birth_year?: string;
+  birth_month?: string;
+  birth_day?: string;
 }

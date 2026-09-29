@@ -12,6 +12,7 @@ import {
   patternLabel,
   colorCountLabel,
 } from '@/utils/petIdentity';
+import { readBirthInfo, formatBirthDisplay } from '@/utils/birthInfo';
 
 interface ParentInfo {
   id: string;
@@ -176,8 +177,9 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
       key: 'birth_date',
       label: 'วันเกิด',
       icon: '🎂',
-      value: pet.birth_date ? format(new Date(pet.birth_date), 'd MMMM yyyy', { locale: th }) : null,
-      hasData: !!pet.birth_date,
+      value: formatBirthDisplay(readBirthInfo(pet))
+        || (pet.birth_date ? format(new Date(pet.birth_date), 'd MMMM yyyy', { locale: th }) : null),
+      hasData: !!(pet.birth_precision || pet.birth_date),
       category: 'identity',
     },
     {

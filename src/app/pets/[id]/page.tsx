@@ -19,6 +19,7 @@ import { ProgressivePassport } from '@/components/passport/ProgressivePassport';
 import { useRef } from 'react';
 import { CertificateSection } from '@/components/certificate/CertificateSection';
 import { setPetProfileImage, clearPetProfileImage } from '@/utils/petProfileImage';
+import { readBirthInfo, formatBirthDisplay } from '@/utils/birthInfo';
 
 const EVENT_TYPES = [
   { value: 'medical', label: 'การรักษาพยาบาล', color: 'bg-red-100 text-red-800' },
@@ -202,6 +203,7 @@ export default function PetDetailPage() {
   }
 
   const age = pet.birth_date ? calculateAge(pet.birth_date) : null;
+  const birthDisplay = formatBirthDisplay(readBirthInfo(pet));
 
   // §16 — identity ใหม่เมื่อมี · legacy free text แสดงต่อเมื่อยังไม่มี structured data
   const identity = readPetIdentity(pet);
@@ -312,11 +314,11 @@ export default function PetDetailPage() {
                 <p className="font-medium">{pet.gender}</p>
               </div>
             )}
-            {pet.birth_date && (
+            {(pet.birth_date || birthDisplay) && (
               <div>
                 <p className="text-sm text-gray-500">วันเกิด</p>
                 <p className="font-medium">
-                  {format(new Date(pet.birth_date), 'd MMM yyyy', { locale: th })}
+                  {birthDisplay || format(new Date(pet.birth_date!), 'd MMM yyyy', { locale: th })}
                 </p>
               </div>
             )}

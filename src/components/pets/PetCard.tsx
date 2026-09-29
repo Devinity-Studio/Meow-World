@@ -10,6 +10,7 @@ import {
   patternLabel,
   colorCountLabel,
 } from '@/utils/petIdentity';
+import { readBirthInfo, formatBirthDisplay } from '@/utils/birthInfo';
 
 interface PetCardProps {
   pet: Pet;
@@ -20,6 +21,7 @@ interface PetCardProps {
 
 export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
   const age = pet.birth_date ? calculateAge(pet.birth_date) : null;
+  const birthDisplay = formatBirthDisplay(readBirthInfo(pet));
 
   // §16 — ข้อมูลเดิมอ่านได้ครบ: identity ใหม่เมื่อมี · legacy free text แสดงต่อเมื่อยังไม่มี
   const identity = readPetIdentity(pet);
@@ -89,10 +91,10 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
             <span className="font-medium">เพศ:</span> {pet.gender}
           </p>
         )}
-        {pet.birth_date && (
+        {(pet.birth_date || birthDisplay) && (
           <p>
             <span className="font-medium">วันเกิด:</span>{' '}
-            {format(new Date(pet.birth_date), 'd MMMM yyyy', { locale: th })}
+            {birthDisplay || format(new Date(pet.birth_date!), 'd MMMM yyyy', { locale: th })}
             {age && ` (${age})`}
           </p>
         )}
