@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { HomeAnchor } from "@/components/navigation/HomeAnchor";
 
 export const metadata: Metadata = {
   title: "Meow World — Heart Edition | Living Passport & Life Journey",
@@ -13,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="th" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* Gate 3 — Global Home Anchor: จุดเดียวของระบบ (ซ่อนเองตาม pathname) */}
+        <HomeAnchor />
+      </body>
     </html>
   );
 }
