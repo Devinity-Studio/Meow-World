@@ -186,6 +186,15 @@ export default function PetDetailPage() {
     }
   }
 
+  // Gate 2 — Passport → Life Journey: ปิด modal รอ unmount แล้วค่อย smooth scroll
+  // ไปยัง section เดิมของ Pet ตัวเดียวกัน (context ไม่เปลี่ยน · ไม่มี route ใหม่)
+  function handlePassportNavigateToJourney() {
+    setShowPassport(false);
+    requestAnimationFrame(() => {
+      document.getElementById('life-journey')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -341,7 +350,7 @@ export default function PetDetailPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-6 scroll-mt-4" id="life-journey">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Life Journey</h2>
             <button
@@ -425,7 +434,7 @@ export default function PetDetailPage() {
 
       {/* Progressive Passport Modal */}
       {showPassport && (
-        <ProgressivePassport petId={petId} onClose={() => setShowPassport(false)} />
+        <ProgressivePassport petId={petId} onClose={() => setShowPassport(false)} onNavigateJourney={handlePassportNavigateToJourney} />
       )}
     </div>
   );

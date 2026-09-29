@@ -33,6 +33,9 @@ interface PassportField {
 interface ProgressivePassportProps {
   petId: string;
   onClose?: () => void;
+  /** Gate 2 — ให้ข้อมูลเดิม "📸 Life Journey: N เหตุการณ์" เป็น Navigation
+   *  (ปิด modal ก่อน → scroll ไป #life-journey) — เรียกได้ทั้ง N>0 และ N=0 */
+  onNavigateJourney?: () => void;
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
@@ -42,7 +45,7 @@ const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
   future: { label: 'ข้อมูลเพิ่มเติม', color: 'text-[#8C867E]' },
 };
 
-export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps) {
+export function ProgressivePassport({ petId, onClose, onNavigateJourney }: ProgressivePassportProps) {
   const supabase = createClient();
   const [pet, setPet] = useState<Pet | null>(null);
   const [mother, setMother] = useState<ParentInfo | null>(null);
@@ -338,7 +341,42 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
                   <span className="text-[10px] font-mono text-gray-400">{catFilled}/{catFields.length}</span>
                 </div>
                 <div className="space-y-2">
-                  {catFields.map((field) => (
+                  {catFields.map((field) => {
+                    // Gate 2 — แถว "Life Journey" ของหมวด health เป็น Interactive Navigation
+                    // (ข้อมูลเดิมกลายเป็นปุ่ม — ไม่เพิ่มปุ่ม/section ใหม่ · กดได้ทั้ง N>0 และ N=0)
+                    const isJourneyNav = field.key === 'events' && !!onNavigateJourney;
+                    if (isJourneyNav) {
+                      return (
+                        <button
+                          key={field.key}
+                          type="button"
+                          onClick={onNavigateJourney}
+                          aria-label="ไปยัง Life Journey"
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl transition text-left ${
+                            field.hasData
+                              ? 'bg-[#FAF7F2] border border-[#E8E2D9] hover:border-[#E06D53]/50'
+                              : 'bg-gray-50 border border-dashed border-gray-200 hover:border-[#E06D53]/50'
+                          }`}
+                        >
+                          <span className="text-lg w-8 text-center">{field.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-500">{field.label}</p>
+                            {field.hasData ? (
+                              <p className="text-sm font-bold text-gray-900 truncate">{field.value}</p>
+                            ) : (
+                              <p className="text-xs text-gray-400 italic">ยังไม่มีเหตุการณ์</p>
+                            )}
+                          </div>
+                          <span
+                            aria-hidden
+                            className="text-lg shrink-0 text-[#E06D53]"
+                          >
+                            →
+                          </span>
+                        </button>
+                      );
+                    }
+                    return (
                     <div
                       key={field.key}
                       className={`flex items-center gap-3 p-3 rounded-xl transition ${
@@ -360,7 +398,8 @@ export function ProgressivePassport({ petId, onClose }: ProgressivePassportProps
                         {field.hasData ? '✓' : '○'}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
