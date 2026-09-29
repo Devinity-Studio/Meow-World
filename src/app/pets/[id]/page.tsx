@@ -16,7 +16,9 @@ import {
 import { ShareButton } from '@/components/qr/ShareButton';
 import { TokenList } from '@/components/qr/TokenList';
 import { ProgressivePassport } from '@/components/passport/ProgressivePassport';
+import { useRef } from 'react';
 import { CertificateSection } from '@/components/certificate/CertificateSection';
+import { setPetProfileImage, clearPetProfileImage } from '@/utils/petProfileImage';
 
 const EVENT_TYPES = [
   { value: 'medical', label: 'การรักษาพยาบาล', color: 'bg-red-100 text-red-800' },
@@ -39,6 +41,8 @@ export default function PetDetailPage() {
   const [showTokens, setShowTokens] = useState(false);
   const [showPassport, setShowPassport] = useState(false);
   const [certContext, setCertContext] = useState<{ homeId: string; userId: string } | null>(null);
+  const [profileUploading, setProfileUploading] = useState(false);
+  const profileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
 
@@ -81,6 +85,35 @@ export default function PetDetailPage() {
       setLoading(false);
     }
   }, [petId, supabase]);
+
+  // Profile Image — Visual Identity (1 รูป · เปลี่ยนได้ · ล้างได้ · ไม่บังคับ)
+  // ห้ามใช้รูป infer Breed/Colour/Pattern · ไม่เกี่ยวกับ Passport Profile/Biometrics
+  async function handleProfileImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !certContext) return;
+    try {
+      setProfileUploading(true);
+      await setPetProfileImage({ homeId: certContext.homeId, petId, file });
+      await fetchPetData();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'นำเข้ารูปไม่สำเร็จ');
+    } finally {
+      setProfileUploading(false);
+    }
+  }
+
+  async function handleProfileImageClear() {
+    try {
+      setProfileUploading(true);
+      await clearPetProfileImage(petId);
+      await fetchPetData();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'ล้างรูปไม่สำเร็จ');
+    } finally {
+      setProfileUploading(false);
+    }
+  }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -192,12 +225,56 @@ export default function PetDetailPage() {
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{pet.name}</h1>
-              <p className="text-gray-600 mt-1">
-                {pet.species}{breedText && ` - ${breedText}`}
-                {age && ` • ${age}`}
-              </p>
+            <div className="flex items-start gap-4 min-w-0">
+              {/* Profile Image — 1 รูป · เปลี่ยน/ล้างได้ · ไม่บังคับ */}
+              <div className="relative shrink-0">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#F3EFEA] border-2 border-white shadow-sm">
+                  {pet.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={pet.avatar_url} alt={pet.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">🐾</div>
+                  )}
+                </div>
+                <input
+                  ref={profileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleProfileImageChange}
+                />
+                <div className="absolute -bottom-2 -right-2 flex gap-1">
+                  <button
+                    type="button"
+                    aria-label={pet.avatar_url ? 'เปลี่ยนรูปประจำตัว' : 'เพิ่มรูปประจำตัว'}
+                    title="รูปประจำตัวน้อง (ไม่บังคับ)"
+                    disabled={profileUploading}
+                    onClick={() => profileInputRef.current?.click()}
+                    className="w-7 h-7 rounded-full bg-white border border-gray-300 shadow-sm text-xs hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {profileUploading ? '…' : pet.avatar_url ? '✏️' : '📷'}
+                  </button>
+                  {pet.avatar_url && (
+                    <button
+                      type="button"
+                      aria-label="ล้างรูปประจำตัว"
+                      title="ล้างรูปประจำตัว"
+                      disabled={profileUploading}
+                      onClick={handleProfileImageClear}
+                      className="w-7 h-7 rounded-full bg-white border border-gray-300 shadow-sm text-xs hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{pet.name}</h1>
+                <p className="text-gray-600 mt-1">
+                  {pet.species}{breedText && ` - ${breedText}`}
+                  {age && ` • ${age}`}
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
               <button

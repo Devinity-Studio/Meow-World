@@ -34,7 +34,18 @@ export function PetCard({ pet, onView, onEdit, onDelete }: PetCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-xl font-semibold text-gray-800">{pet.name}</h3>
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Profile Image — Visual Identity เท่านั้น (ไม่ใช่ Passport Profile/Biometrics) */}
+          <div className="w-12 h-12 shrink-0 rounded-full overflow-hidden bg-[#F3EFEA] border-2 border-white shadow-xs">
+            {pet.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={pet.avatar_url} alt={pet.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xl">🐾</div>
+            )}
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 truncate">{pet.name}</h3>
+        </div>
         <div className="flex gap-2">
           {onView && (
             <button
