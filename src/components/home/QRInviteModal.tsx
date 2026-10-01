@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { X, Copy, Check, Download, KeyRound, ArrowRight, Users } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { Family, UserRole } from '@/types';
+import { joinHomeWithInvite } from '@/lib/invitations';
 
 interface QRInviteModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [inputToken, setInputToken] = useState<string>('');
-  const [joinStatus, setJoinStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [joinStatus, setJoinStatus] = useState<{ success: boolean; message: string; pending?: boolean } | null>(null);
   const [creating, setCreating] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -49,23 +50,24 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
       if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้');
       if (!anchorPetId) throw new Error('บ้านยังไม่มีน้อง — เพิ่มน้องก่อนจึงจะเชิญสมาชิกได้');
 
-      const code = `FAM-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      // Step 6 Contract: invite_code สร้างโดย server (trigger) — client ห้ามตั้งเอง
       const { data, error } = await supabase
         .from('qr_tokens')
         .insert({
           pet_id: anchorPetId,
           sender_id: user.id,
           context: 'family',
-          message: `เชิญเข้าร่วม "${family.name}" ในบทบาท ${role}`,
+          // Design Lock: role เป็น structured column — message เป็นข้อความแสดงผลเท่านั้น
+          role,
+          message: `เชิญเข้าร่วม "${family.name}" เป็น${role === 'viewer' ? 'ผู้ดู (ดูอย่างเดียว)' : 'ผู้แก้ไข (บันทึกเรื่องราวได้)'}`,
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
-        .select('id')
+        .select('id, invite_code')
         .single();
       if (error) throw error;
 
-      // เก็บ role ที่เลือกไว้ใน message (qr_tokens ยังไม่มีคอลัมน์ role — V.0.999 อ่านจาก message)
       setInviteTokenId(data.id);
-      setInviteCode(code);
+      setInviteCode(data.invite_code);
     } catch (e: unknown) {
       setInviteError(e instanceof Error ? e.message : 'สร้างคำเชิญไม่สำเร็จ');
     } finally {
@@ -101,18 +103,26 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
     }
   };
 
-  const handleJoinSubmit = (e: React.FormEvent) => {
+  // Join จริง (Design Lock): token → RPC security-definer (validate → join → consume แบบ atomic)
+  // membership ไม่สำเร็จ = token ยังใช้ได้ — UI สะท้อนผลจริงจากระบบ ไม่โชว์ success ปลอม
+  const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // จำลองการตรวจสอบ Token
-    if (inputToken.length > 4) {
-      setJoinStatus({ success: true, message: 'เข้าร่วมบ้านสำเร็จ! กำลังตรวจสอบสิทธิ์...' });
-      setTimeout(() => {
-        if (onJoinWithToken) onJoinWithToken();
-        onClose();
-      }, 1500);
-    } else {
-      setJoinStatus({ success: false, message: 'รหัสไม่ถูกต้อง กรุณาลองใหม่' });
+    const candidate = inputToken.trim();
+    if (!candidate || joinStatus?.pending) return;
+
+    setJoinStatus({ success: false, message: 'กำลังตรวจสอบรหัสเชิญ...', pending: true });
+    const result = await joinHomeWithInvite(candidate);
+
+    if (!result.ok) {
+      setJoinStatus({ success: false, message: result.reason });
+      return;
     }
+
+    setJoinStatus({ success: true, message: 'เข้าร่วมบ้านสำเร็จ! กำลังพาไปที่บ้าน...' });
+    setTimeout(() => {
+      onClose();
+      window.location.assign('/world');
+    }, 1200);
   };
 
   if (!isOpen) return null;
@@ -259,7 +269,7 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
                     type="text"
                     value={inputToken}
                     onChange={(e) => setInputToken(e.target.value.toUpperCase())}
-                    placeholder="เช่น MW-ABC123"
+                    placeholder="เช่น FAM-A7K3Q9MX"
                     className="w-full p-3 text-center font-mono text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none uppercase tracking-widest"
                   />
                 </div>
@@ -274,7 +284,7 @@ export const QRInviteModal: React.FC<QRInviteModalProps> = ({
 
                 <button
                   type="submit"
-                  disabled={!inputToken || !!joinStatus}
+                  disabled={!inputToken || !!joinStatus?.pending}
                   className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/30 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                 >
                   เข้าร่วมบ้าน <ArrowRight className="w-4 h-4" />

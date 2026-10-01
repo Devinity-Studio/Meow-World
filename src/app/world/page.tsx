@@ -10,6 +10,7 @@ import { buildJourneyEventPayload } from '@/utils/eventPayload';
 import { JOURNEY_EVENT_COLUMNS, adaptJourneyEventRow, JourneyEventRow } from '@/utils/journeyAdapter';
 import { HomeIdentityCard } from '@/components/home/HomeIdentityCard';
 import { buildHomeIdentitySummary, type HomeIdentitySummary } from '@/utils/homeIdentity';
+import { joinHomeWithInvite } from '@/lib/invitations';
 
 interface Home {
   id: string;
@@ -39,6 +40,11 @@ export default function WorldPage() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [identity, setIdentity] = useState<HomeIdentitySummary | null>(null);
   const [showQRInvite, setShowQRInvite] = useState(false);
+  // หน้า no-home แยก intent: Create Home ≠ Join Existing Home (Design Lock ข้อ 4)
+  const [noHomeIntent, setNoHomeIntent] = useState<'choose' | 'create' | 'join' | 'joining'>('choose');
+  const [pendingJoinCode, setPendingJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [events, setEvents] = useState<JourneyEvent[]>([]);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
@@ -65,10 +71,20 @@ export default function WorldPage() {
         avatarUrl: (user.user_metadata?.avatar_url as string | undefined) ?? undefined,
       });
 
+      // Home discovery (Design Lock): เจ้าของบ้าน หรือ สมาชิกที่ join มา — ไม่ใช่ owner-only
+      const { data: memberships } = await supabase
+        .from('home_members')
+        .select('home_id')
+        .eq('user_id', user.id);
+
+      const memberHomeIds = (memberships ?? []).map((m) => m.home_id).filter(Boolean);
+      // id.in.() ต้องมีรายการ — ใส่ nil UUID เมื่อไม่มี membership (ยังคง match owner_id ได้ปกติ)
+      const idList = memberHomeIds.length > 0 ? memberHomeIds.join(',') : '00000000-0000-0000-0000-000000000000';
+
       const { data, error: homeError } = await supabase
         .from('homes')
         .select('id, name, description, created_at')
-        .eq('owner_id', user.id)
+        .or(`owner_id.eq.${user.id},id.in.(${idList})`)
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -311,40 +327,141 @@ export default function WorldPage() {
   if (!home) {
     return (
       <main className="min-h-screen bg-orange-50 px-4 py-12">
-        <form onSubmit={handleCreateHome} className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900">สร้างบ้านของคุณ</h1>
-          <p className="mt-2 text-gray-600">เริ่มต้นพื้นที่สำหรับสมาชิกและแมวของคุณ</p>
+        {noHomeIntent === 'choose' && (
+          <div className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900">ยินดีต้อนรับ</h1>
+            <p className="mt-2 text-gray-600">พื้นที่สำหรับสมาชิกและแมวของคุณ — มีสองทางเลือก</p>
 
-          <label htmlFor="home-name" className="mt-6 block text-sm font-medium text-gray-700">ชื่อบ้าน *</label>
-          <input
-            id="home-name"
-            value={homeName}
-            onChange={(event) => setHomeName(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
-            placeholder="เช่น บ้านของเรา"
-            required
-          />
+            <button
+              onClick={() => setNoHomeIntent('create')}
+              className="mt-6 w-full rounded-xl bg-orange-500 py-4 font-bold text-white hover:bg-orange-600"
+            >
+              🏠 สร้างบ้านของฉัน
+            </button>
+            <button
+              onClick={() => setNoHomeIntent('join')}
+              className="mt-3 w-full rounded-xl border-2 border-orange-200 bg-white py-4 font-bold text-orange-600 hover:border-orange-300 hover:bg-orange-50"
+            >
+              🤝 เข้าร่วมบ้านที่มีคนเชิญ
+            </button>
+          </div>
+        )}
 
-          <label htmlFor="home-description" className="mt-4 block text-sm font-medium text-gray-700">คำอธิบาย</label>
-          <textarea
-            id="home-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
-            rows={3}
-            placeholder="คำอธิบายบ้าน (ถ้ามี)"
-          />
+        {noHomeIntent === 'create' && (
+          <form onSubmit={handleCreateHome} className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900">สร้างบ้านของคุณ</h1>
+            <p className="mt-2 text-gray-600">เริ่มต้นพื้นที่สำหรับสมาชิกและแมวของคุณ</p>
 
-          {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
+            <label htmlFor="home-name" className="mt-6 block text-sm font-medium text-gray-700">ชื่อบ้าน *</label>
+            <input
+              id="home-name"
+              value={homeName}
+              onChange={(event) => setHomeName(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+              placeholder="เช่น บ้านของเรา"
+              required
+            />
 
-          <button
-            type="submit"
-            disabled={saving || !homeName.trim()}
-            className="mt-6 w-full rounded-xl bg-orange-500 py-3 font-bold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? 'กำลังบันทึก...' : 'สร้างบ้าน'}
-          </button>
-        </form>
+            <label htmlFor="home-description" className="mt-4 block text-sm font-medium text-gray-700">คำอธิบาย</label>
+            <textarea
+              id="home-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+              rows={3}
+              placeholder="คำอธิบายบ้าน (ถ้ามี)"
+            />
+
+            {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={saving || !homeName.trim()}
+              className="mt-6 w-full rounded-xl bg-orange-500 py-3 font-bold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? 'กำลังบันทึก...' : 'สร้างบ้าน'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setNoHomeIntent('choose'); setError(null); }}
+              className="mt-3 w-full text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              ← กลับ
+            </button>
+          </form>
+        )}
+
+        {noHomeIntent === 'join' && (
+          <div className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900">เข้าร่วมบ้านที่มีคนเชิญ</h1>
+            <p className="mt-2 text-gray-600">วางลิงก์เชิญ (URL หรือรหัสจาก QR) ที่ได้รับจากเจ้าของบ้าน</p>
+
+            <div
+              className="mt-6 rounded-xl border-2 border-dashed border-gray-300 p-6"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const text = e.dataTransfer.getData('text') || e.dataTransfer.getData('text/plain');
+                if (text) { setPendingJoinCode(text); setNoHomeIntent('joining'); }
+              }}
+            >
+              <p className="text-center text-sm text-gray-500">ลากลิงก์เชิญมาวางที่นี่</p>
+              <button
+                onClick={() => { setPendingJoinCode(''); setNoHomeIntent('joining'); }}
+                className="mt-4 w-full rounded-xl bg-blue-600 py-3 font-bold text-white hover:bg-blue-700"
+              >
+                วางรหัสเชิญแทน
+              </button>
+            </div>
+            <button
+              onClick={() => setNoHomeIntent('choose')}
+              className="mt-4 w-full text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              ← กลับ
+            </button>
+          </div>
+        )}
+
+        {noHomeIntent === 'joining' && (
+          <div className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-sm">
+            <h1 className="text-xl font-bold text-gray-900">รหัสเชิญของคุณ</h1>
+            <p className="mt-2 text-sm text-gray-600">ระบบจะตรวจสอบรหัส → สร้างสิทธิ์สมาชิก แบบอัตโนมัติ</p>
+
+            <input
+              value={pendingJoinCode}
+              onChange={(event) => setPendingJoinCode(event.target.value)}
+              className="mt-4 w-full rounded-xl border border-gray-300 px-4 py-3 font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              placeholder="FAM-A7K3Q9MX หรือลิงก์ /adopt/…"
+            />
+
+            {joinError && <p role="alert" className="mt-3 text-sm text-red-600">{joinError}</p>}
+
+            <button
+              onClick={async () => {
+                setJoining(true);
+                setJoinError(null);
+                const result = await joinHomeWithInvite(pendingJoinCode);
+                if (!result.ok) {
+                  setJoinError(result.reason);
+                  setJoining(false);
+                  return;
+                }
+                // join สำเร็จ → discovery ใหม่จะเจอบ้านที่เพิ่งเป็นสมาชิก
+                window.location.assign('/world');
+              }}
+              disabled={joining || !pendingJoinCode.trim()}
+              className="mt-4 w-full rounded-xl bg-blue-600 py-3 font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {joining ? 'กำลังเข้าร่วม...' : '🤝 เข้าร่วมบ้าน'}
+            </button>
+            <button
+              onClick={() => { setNoHomeIntent('join'); setJoinError(null); }}
+              className="mt-3 w-full text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              ← กลับ
+            </button>
+          </div>
+        )}
       </main>
     );
   }

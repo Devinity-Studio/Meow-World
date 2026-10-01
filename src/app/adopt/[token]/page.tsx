@@ -10,6 +10,7 @@ import {
   type TokenValidationResult,
   CONTEXT_DISPLAY,
 } from '@/lib/token-validation';
+import { fetchInvitePreview, joinHomeWithInvite, type InvitePreview } from '@/lib/invitations';
 
 /** Shape of token data used in the adopt page (flattened from API response) */
 interface QRTokenData {
@@ -50,6 +51,8 @@ export default function AdoptPage() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [homeName, setHomeName] = useState('บ้านของเรา');
   const [isProcessing, setIsProcessing] = useState(false);
+  // Preview ขั้นต่ำของบ้านเป้าหมาย (family) — token คือสิทธิ์ชั่วคราว, อ่านผ่าน security-definer RPC
+  const [preview, setPreview] = useState<InvitePreview | null>(null);
 
   // Check session and load token data via Validation API
   useEffect(() => {
@@ -86,6 +89,11 @@ export default function AdoptPage() {
           pet: t.pet || undefined,
           sender: t.sender ? { ...t.sender, avatar_url: null } : undefined,
         });
+
+        // Preview ขั้นต่ำของบ้าน (family) — ล้มเหลวไม่บล็อกการ join (incomplete = valid)
+        if (t.context === 'family') {
+          fetchInvitePreview(token).then(setPreview).catch(() => setPreview(null));
+        }
 
         if (session) {
           setStep('preview');
@@ -129,7 +137,16 @@ export default function AdoptPage() {
         throw new Error('คุณไม่สามารถ adopt สัตว์ของตัวเองได้');
       }
 
-      // 1. Mark token as used FIRST (prevent race condition)
+      // ── Family invite (Design Lock): ระบบตรวจ → join → consume แบบ atomic ใน RPC เดียว ──
+      // membership ไม่สำเร็จ = token ยังใช้ได้ (แก้ failure mode ที่พิสูจน์ด้วย Runtime Evidence)
+      if (tokenData.context === 'family') {
+        const result = await joinHomeWithInvite(token);
+        if (!result.ok) throw new Error(result.reason);
+        setStep('success');
+        return;
+      }
+
+      // 1. Mark token as used FIRST (prevent race condition) — adoption flow เท่านั้น
       const { error: tokenUpdateError } = await supabase
         .from('qr_tokens')
         .update({
@@ -151,43 +168,6 @@ export default function AdoptPage() {
 
       if (!verifyToken || verifyToken.used_by !== user.id) {
         throw new Error('QR Token นี้ถูกใช้โดยคนอื่นไปแล้ว');
-      }
-
-      // ── Family invite (V.0.999): token context = 'family' → เป็นสมาชิกบ้านผู้เชิญ ──
-      // ต่างจาก adoption: ไม่ transfer น้อง ไม่สร้างบ้านใหม่ — join home ของผู้เชิญ
-      if (tokenData.context === 'family') {
-        // หาบ้านของผู้เชิญจากน้องที่ token อ้างถึง (pet อยู่ในบ้านของผู้เชิญเสมอ)
-        const { data: petHome, error: petHomeError } = await supabase
-          .from('pets')
-          .select('home_id')
-          .eq('id', tokenData.pet_id)
-          .single();
-        if (petHomeError || !petHome) throw new Error('ไม่พบบ้านของผู้เชิญ');
-
-        // ตรวจว่ายังไม่เป็นสมาชิกบ้านนี้อยู่แล้ว
-        const { data: existingMembership } = await supabase
-          .from('home_members')
-          .select('id')
-          .eq('home_id', petHome.home_id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (existingMembership) {
-          throw new Error('คุณเป็นสมาชิกของบ้านนี้อยู่แล้ว');
-        }
-
-        // เพิ่มเป็นสมาชิก — RLS "Owner manages members" ตรวจว่า token นี้มาจาก owner
-        // (ผู้เชิญคือ owner ตาม flow สร้างคำเชิญ) — role อ่านจาก message ที่ owner ตั้ง
-        const { error: memberError } = await supabase
-          .from('home_members')
-          .insert({
-            home_id: petHome.home_id,
-            user_id: user.id,
-            role: 'editor',
-          });
-        if (memberError) throw new Error('เข้าร่วมบ้านไม่สำเร็จ: ' + memberError.message);
-
-        setStep('success');
-        return;
       }
 
       // 2. Check if user already has a home
@@ -318,29 +298,41 @@ export default function AdoptPage() {
             </p>
           </div>
 
-          {/* Pet Preview */}
-          <div className="bg-gray-50 rounded-2xl p-4 mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-4xl overflow-hidden">
-                {tokenData.pet?.avatar_url ? (
-                  <img 
-                    src={tokenData.pet.avatar_url} 
-                    alt={tokenData.pet.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  '🐱'
-                )}
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{tokenData.pet?.name}</h2>
-                <p className="text-gray-600">{tokenData.pet?.species}</p>
-                {tokenData.pet?.breed && (
-                  <p className="text-sm text-gray-500">{tokenData.pet.breed}</p>
-                )}
+          {/* Preview — family: การ์ดบ้านเป้าหมาย (pet อาจมองไม่เห็นตาม RLS) / adoption: การ์ดน้อง */}
+          {tokenData.context === 'family' && preview ? (
+            <div className="bg-orange-50 rounded-2xl p-4 mb-6">
+              <h2 className="text-lg font-bold text-gray-900">🏠 {preview.home_name}</h2>
+              {preview.home_description && (
+                <p className="text-sm text-gray-600 mt-1">{preview.home_description}</p>
+              )}
+              <p className="text-sm text-gray-600 mt-2">
+                สมาชิกในบ้าน: {preview.member_count} คน · น้องในบ้าน: {preview.pet_count} ตัว
+              </p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-4xl overflow-hidden">
+                  {tokenData.pet?.avatar_url ? (
+                    <img
+                      src={tokenData.pet.avatar_url}
+                      alt={tokenData.pet.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    '🐱'
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{tokenData.pet?.name}</h2>
+                  <p className="text-gray-600">{tokenData.pet?.species}</p>
+                  {tokenData.pet?.breed && (
+                    <p className="text-sm text-gray-500">{tokenData.pet.breed}</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Message */}
           {tokenData.message && (
@@ -349,19 +341,21 @@ export default function AdoptPage() {
             </div>
           )}
 
-          {/* Create Home Option */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              ตั้งชื่อบ้านของคุณ
-            </label>
-            <input
-              type="text"
-              value={homeName}
-              onChange={(e) => setHomeName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="เช่น บ้านของเรา, บ้าน arthur"
-            />
-          </div>
+          {/* Create Home Option — adoption เท่านั้น (family join ไม่สร้างบ้านใหม่) */}
+          {tokenData.context !== 'family' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ตั้งชื่อบ้านของคุณ
+              </label>
+              <input
+                type="text"
+                value={homeName}
+                onChange={(e) => setHomeName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="เช่น บ้านของเรา, บ้าน arthur"
+              />
+            </div>
+          )}
 
           {/* Action Buttons */}
           <button
@@ -373,7 +367,7 @@ export default function AdoptPage() {
               <span className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full"></span>
             ) : (
               <>
-                <span>🏠</span> รับน้องเข้าบ้าน
+                {tokenData.context === 'family' ? '👨‍👩‍👧‍👦 เข้าร่วมบ้าน' : '🏠 รับน้องเข้าบ้าน'}
               </>
             )}
           </button>
@@ -410,10 +404,10 @@ export default function AdoptPage() {
           </div>
 
           <button
-            onClick={() => router.push(`/pets/${tokenData?.pet_id}`)}
+            onClick={() => router.push(tokenData?.context === 'family' ? '/world' : `/pets/${tokenData?.pet_id}`)}
             className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold"
           >
-            ไปดูน้องในบ้าน
+            {tokenData?.context === 'family' ? 'ไปที่บ้านของเรา' : 'ไปดูน้องในบ้าน'}
           </button>
 
           <p className="text-xs text-gray-400 mt-4">
