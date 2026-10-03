@@ -257,7 +257,69 @@ Unified Timeline, Event, Participants, Previous / Next Event, Photos, Story แ�
 9. **Relationship เป็น Domain Data ไม่ใช่ UI decoration**
 10. **ไม่สร้าง Feature ให้เป็นเกาะ**
 
-## 16. Acceptance Criteria for Prototype V.1
+## 16. Future Direction — Life Journey Sharing
+
+> **Status: FUTURE / Prototype V.1 — Do not implement in the current prototype**
+
+Life Journey มีศักยภาพที่จะเป็นทั้งพื้นที่เก็บความทรงจำและจุดเชื่อมต่อระหว่าง Meow World กับโลกภายนอก
+
+ใน Prototype V.1 ให้พิจารณา **Share** เป็น Social Sharing entry point โดยมีแนวคิดระยะยาวดังนี้:
+
+- ผู้ใช้สามารถ Share Life Journey ไปยัง Social Platforms เช่น **Facebook, Instagram และ TikTok**
+- Shared content ควรมีทางกลับเข้าสู่ **Meow World**
+- ผู้ที่พบเห็น Story จาก Social Platform ควรสามารถกดกลับเข้ามาดู Content ที่เปิดเผยต่อสาธารณะใน Meow World ได้
+- การนำผู้พบเห็นกลับเข้าสู่ Meow World อาจเป็นหนึ่งใน Organic Discovery / Growth Loop ของ Product
+
+Concept:
+
+```
+Life Journey
+     │
+     │ Share
+     ▼
+Facebook / Instagram / TikTok
+     │
+     │ คนพบเห็น Story
+     ▼
+Meow World
+     │
+     ▼
+Public / Shareable Story
+```
+
+### Privacy / Domain Boundary
+
+การ Share ไม่ควรหมายถึงการเปิดเผย Home ทั้งหมด
+
+ในอนาคตควรแยกความหมายระหว่าง:
+
+- **Private Home** — พื้นที่ส่วนตัวและข้อมูลภายใน Home
+- **Shareable / Public Story** — Content ที่เจ้าของเลือกเปิดเผย
+- **Public Entry Point** — หน้าที่ผู้พบเห็นเข้ามาจาก Social Platform
+
+การกด Share เพียงครั้งเดียวไม่ควรทำให้ข้อมูล Private ของ Home ถูกเปิดเผยโดยอัตโนมัติ
+
+### Current Prototype Boundary
+
+**ไม่ต้อง Implement Social Integration, Public Story Infrastructure หรือ Deep Link กลับเข้า Meow World ใน Prototype ปัจจุบัน**
+
+ให้เก็บ Direction นี้ไว้เป็น **Prototype V.1 Future Requirement** และเมื่อถึง V.1 ให้ Reconcile กับ:
+
+```
+Privacy Model
+    ↓
+Public / Shareable Story Model
+    ↓
+Share URL / Deep Link
+    ↓
+Social Platform Behavior
+    ↓
+Meow World Entry Experience
+    ↓
+Evidence
+```
+
+## 17. Acceptance Criteria for Prototype V.1
 
 - [ ] Pet มี Relationship กับ Person / Pet อื่นได้
 - [ ] Relationship มี Type ที่ชัดเจน
@@ -278,8 +340,9 @@ Unified Timeline, Event, Participants, Previous / Next Event, Photos, Story แ�
 - [ ] User-confirmed data เป็น Source of Truth
 - [ ] User ไม่ถูกบังคับให้เขียน Story ทันที
 - [ ] ไม่มีการสร้างข้อมูลซ้ำเพียงเพื่อรองรับหลาย View
+- [ ] **Future Direction:** Share ไปยัง Facebook / Instagram / TikTok และการนำผู้พบเห็นกลับเข้าสู่ Meow World ถูกเก็บเป็น Requirement สำหรับ V.1 แต่ยังไม่ถือเป็น Current Prototype implementation
 
-## 17. Developer Rule
+## 18. Developer Rule
 
 ก่อนเริ่ม Implementation ใน Prototype V.1:
 
@@ -299,7 +362,7 @@ EVIDENCE
 
 ห้ามตีความเอกสารนี้เป็นคำสั่งให้สร้างทุกอย่างในครั้งเดียว ให้เลือก Vertical Slice ที่เล็กที่สุดซึ่งพิสูจน์ Relationship Model ได้จริง แล้วค่อยขยาย
 
-## 18. Final Concept
+## 19. Final Concept
 
 ```
                  HOME
